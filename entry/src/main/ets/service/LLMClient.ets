@@ -1,15 +1,22 @@
 import { http } from '@kit.NetworkKit'
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
-import { ChatRequest, ChatResponseChunk, ToolCall } from '../model/LLMModels'
+import { ChatRequest } from '../model/LLMModels'
 
 const TAG = Constants.TAG_LLM
+
+// 工具调用信息
+export interface ToolCallInfo {
+  id: string
+  name: string
+  inputJson: string
+}
 
 // 流式回调
 export interface StreamCallback {
   onContent(content: string): void
-  onToolCalls(toolCalls: ToolCall[]): void
-  onDone(finishReason: string): void
+  onToolUse(toolCalls: ToolCallInfo[]): void
+  onDone(stopReason: string): void
   onError(error: string): void
 }
 
@@ -20,35 +27,96 @@ export class LLMClient {
   async chatStream(request: ChatRequest, callback: StreamCallback): Promise<void> {
     this.sseBuffer = ''
     this.httpRequest = http.createHttp()
-    const toolCallsAccumulator: Map<number, ToolCall> = new Map()
+
+    // 积累工具调用
+    const pendingToolCalls: ToolCallInfo[] = []
+    let currentToolId = ''
+    let currentToolName = ''
+    let currentToolInput = ''
+    let stopReason = ''
 
     this.httpRequest.on('dataReceive', (data: ArrayBuffer) => {
       const text = this.arrayBufferToString(data)
       this.sseBuffer += text
-      this.processSSEBuffer(callback, toolCallsAccumulator)
+
+      // 按行解析 SSE
+      const lines = this.sseBuffer.split('\n')
+      this.sseBuffer = lines[lines.length - 1]
+
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trim()
+
+        if (line.startsWith('data: ')) {
+          const jsonStr = line.substring(6)
+          try {
+            const event = JSON.parse(jsonStr) as Record<string, Object>
+            const eventType = event['type'] as string
+
+            if (eventType === 'content_block_start') {
+              const block = event['content_block'] as Record<string, Object>
+              if (block['type'] === 'tool_use') {
+                currentToolId = block['id'] as string || ''
+                currentToolName = block['name'] as string || ''
+                currentToolInput = ''
+              }
+            } else if (eventType === 'content_block_delta') {
+              const delta = event['delta'] as Record<string, Object>
+              const deltaType = delta['type'] as string
+
+              if (deltaType === 'text_delta') {
+                const text = delta['text'] as string
+                if (text) {
+                  callback.onContent(text)
+                }
+              } else if (deltaType === 'input_json_delta') {
+                const partialJson = delta['partial_json'] as string
+                if (partialJson) {
+                  currentToolInput += partialJson
+                }
+              }
+            } else if (eventType === 'content_block_stop') {
+              // 如果是工具块结束，收集
+              if (currentToolId.length > 0) {
+                pendingToolCalls.push({
+                  id: currentToolId,
+                  name: currentToolName,
+                  inputJson: currentToolInput || '{}'
+                })
+                currentToolId = ''
+                currentToolName = ''
+                currentToolInput = ''
+              }
+            } else if (eventType === 'message_delta') {
+              const delta = event['delta'] as Record<string, Object>
+              stopReason = delta['stop_reason'] as string || 'end_turn'
+            } else if (eventType === 'message_stop') {
+              // 消息结束
+              if (pendingToolCalls.length > 0) {
+                callback.onToolUse(pendingToolCalls)
+              }
+              callback.onDone(stopReason || 'end_turn')
+            } else if (eventType === 'error') {
+              const error = event['error'] as Record<string, Object>
+              callback.onError(error['message'] as string || '未知错误')
+            }
+          } catch {
+            // JSON 解析失败跳过
+          }
+        }
+      }
     })
 
     this.httpRequest.on('dataEnd', () => {
-      // 处理缓冲区残留
-      if (this.sseBuffer.trim().length > 0) {
-        this.processSSEBuffer(callback, toolCallsAccumulator)
-      }
-      // 如果积累了 tool_calls，在结束时一次性回调
-      if (toolCallsAccumulator.size > 0) {
-        const toolCalls: ToolCall[] = []
-        toolCallsAccumulator.forEach((tc) => toolCalls.push(tc))
-        callback.onToolCalls(toolCalls)
-      }
       this.cleanup()
     })
 
     try {
-      const response = await this.httpRequest.requestInStream(Constants.DEEPSEEK_API_URL, {
+      const response = await this.httpRequest.requestInStream(Constants.CLAUDE_API_URL, {
         method: http.RequestMethod.POST,
         header: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Constants.DEEPSEEK_API_KEY}`,
-          'Accept': 'text/event-stream'
+          'x-api-key': Constants.CLAUDE_API_KEY,
+          'anthropic-version': Constants.CLAUDE_API_VERSION
         },
         extraData: JSON.stringify(request),
         expectDataType: http.HttpDataType.STRING
@@ -76,83 +144,12 @@ export class LLMClient {
     }
   }
 
-  private processSSEBuffer(callback: StreamCallback, toolCallsAccumulator: Map<number, ToolCall>): void {
-    const lines = this.sseBuffer.split('\n')
-    // 保留最后一行（可能不完整）
-    this.sseBuffer = lines[lines.length - 1]
-
-    for (let i = 0; i < lines.length - 1; i++) {
-      const line = lines[i].trim()
-      if (!line.startsWith('data: ')) {
-        continue
-      }
-      const jsonStr = line.substring(6)
-      if (jsonStr === '[DONE]') {
-        callback.onDone('stop')
-        return
-      }
-      try {
-        const chunk = JSON.parse(jsonStr) as ChatResponseChunk
-        if (!chunk.choices || chunk.choices.length === 0) {
-          continue
-        }
-        const choice = chunk.choices[0]
-        const delta = choice.delta
-
-        // 文本内容
-        if (delta.content) {
-          callback.onContent(delta.content)
-        }
-
-        // 工具调用（流式积累）
-        if (delta.tool_calls) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index ?? 0
-            const existing = toolCallsAccumulator.get(idx)
-            if (existing) {
-              // 追加 arguments
-              if (tc.function?.arguments) {
-                existing.function.arguments += tc.function.arguments
-              }
-            } else {
-              toolCallsAccumulator.set(idx, {
-                id: tc.id || '',
-                type: 'function',
-                function: {
-                  name: tc.function?.name || '',
-                  arguments: tc.function?.arguments || ''
-                }
-              })
-            }
-          }
-        }
-
-        // 完成原因
-        if (choice.finish_reason) {
-          if (choice.finish_reason === 'tool_calls') {
-            // 触发工具调用回调
-            if (toolCallsAccumulator.size > 0) {
-              const toolCalls: ToolCall[] = []
-              toolCallsAccumulator.forEach((tc) => toolCalls.push(tc))
-              toolCallsAccumulator.clear()
-              callback.onToolCalls(toolCalls)
-            }
-          }
-          callback.onDone(choice.finish_reason)
-        }
-      } catch {
-        // JSON 解析失败跳过
-      }
-    }
-  }
-
   private arrayBufferToString(buffer: ArrayBuffer): string {
     const uint8Array = new Uint8Array(buffer)
     let result = ''
     for (let i = 0; i < uint8Array.length; i++) {
       result += String.fromCharCode(uint8Array[i])
     }
-    // 处理 UTF-8 多字节字符
     try {
       return decodeURIComponent(escape(result))
     } catch {

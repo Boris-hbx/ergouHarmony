@@ -1,8 +1,9 @@
 export class Constants {
-  // DeepSeek API
-  static readonly DEEPSEEK_API_KEY: string = 'sk-YOUR_KEY_HERE'
-  static readonly DEEPSEEK_API_URL: string = 'https://api.deepseek.com/chat/completions'
-  static readonly DEEPSEEK_MODEL: string = 'deepseek-chat'
+  // Claude API
+  static readonly CLAUDE_API_KEY: string = 'sk-ant-YOUR_KEY_HERE'
+  static readonly CLAUDE_API_URL: string = 'https://api.anthropic.com/v1/messages'
+  static readonly CLAUDE_MODEL: string = 'claude-sonnet-4-20250514'
+  static readonly CLAUDE_API_VERSION: string = '2023-06-01'
 
   // LLM 参数
   static readonly LLM_TEMPERATURE: number = 0.7

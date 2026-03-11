@@ -1,6 +1,6 @@
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
-import { LLMClient, StreamCallback } from './LLMClient'
+import { LLMClient, StreamCallback, ToolCallInfo } from './LLMClient'
 import { ErgouPrompt } from './ErgouPrompt'
 import { ToolRegistry } from '../tool/ToolRegistry'
 import { GetDateTimeTool } from '../tool/GetDateTimeTool'
@@ -11,7 +11,16 @@ import { SessionDao } from '../data/SessionDao'
 import { MessageDao } from '../data/MessageDao'
 import { MemoryDao } from '../data/MemoryDao'
 import { ChatMessage } from '../model/ChatModels'
-import { ChatRequest, LLMMessage, ToolCall } from '../model/LLMModels'
+import {
+  ChatRequest,
+  ClaudeMessage,
+  ClaudeToolDefinition,
+  ContentBlock,
+  TextBlock,
+  ToolUseBlock,
+  ToolResultBlock,
+  ToolCall
+} from '../model/LLMModels'
 import { PromptSanitizer } from '../common/PromptSanitizer'
 
 const TAG = Constants.TAG_CHAT
@@ -34,7 +43,6 @@ export class ChatService {
   private saveMemoryTool: SaveMemoryTool = new SaveMemoryTool()
 
   constructor() {
-    // 注册首期工具
     this.toolRegistry.register(new GetDateTimeTool())
     this.toolRegistry.register(new SimpleCalculateTool())
     this.toolRegistry.register(this.saveMemoryTool)
@@ -42,7 +50,6 @@ export class ChatService {
   }
 
   async sendMessage(sessionId: number, userContent: string, callback: ChatCallback): Promise<void> {
-    // 更新工具的 sessionId
     this.saveMemoryTool.setSessionId(sessionId)
 
     // 1. 净化用户输入
@@ -64,21 +71,21 @@ export class ChatService {
     const memories = await this.memoryDao.getRecent(5)
     const memoryTexts = memories.map(m => m.content)
 
-    // 5. 组装 LLM 消息
+    // 5. 组装系统 prompt
     const systemPrompt = ErgouPrompt.buildSystemPrompt() + ErgouPrompt.buildMemoryContext(memoryTexts)
-    const llmMessages = this.buildLLMMessages(systemPrompt, historyMessages)
 
-    // 6. 开始对话循环（可能有多轮工具调用）
-    await this.chatLoop(sessionId, llmMessages, callback, 0)
+    // 6. 构建 Claude 消息
+    const claudeMessages = this.buildClaudeMessages(historyMessages)
+
+    // 7. 开始对话循环
+    await this.chatLoop(sessionId, systemPrompt, claudeMessages, callback, 0)
   }
 
   async createSession(title?: string): Promise<number> {
-    const sessionTitle = title || '新对话'
-    return await this.sessionDao.create(sessionTitle)
+    return await this.sessionDao.create(title || '新对话')
   }
 
   async updateSessionTitle(sessionId: number, firstMessage: string): Promise<void> {
-    // 用第一条消息的前 20 个字符作为标题
     const title = firstMessage.length > 20 ? firstMessage.substring(0, 20) + '...' : firstMessage
     await this.sessionDao.updateTitle(sessionId, title)
   }
@@ -89,7 +96,8 @@ export class ChatService {
 
   private async chatLoop(
     sessionId: number,
-    llmMessages: LLMMessage[],
+    systemPrompt: string,
+    claudeMessages: ClaudeMessage[],
     callback: ChatCallback,
     round: number
   ): Promise<void> {
@@ -99,42 +107,76 @@ export class ChatService {
       return
     }
 
+    // 构建 Claude 工具定义
+    const tools = this.getClaudeTools()
+
     const request: ChatRequest = {
-      model: Constants.DEEPSEEK_MODEL,
-      messages: llmMessages,
-      stream: true,
-      temperature: Constants.LLM_TEMPERATURE,
+      model: Constants.CLAUDE_MODEL,
       max_tokens: Constants.LLM_MAX_TOKENS,
-      tools: this.toolRegistry.getAllDefinitions()
+      system: systemPrompt,
+      messages: claudeMessages,
+      tools: tools.length > 0 ? tools : undefined,
+      stream: true,
+      temperature: Constants.LLM_TEMPERATURE
     }
 
     let fullContent = ''
-    let pendingToolCalls: ToolCall[] = []
+    let pendingToolCalls: ToolCallInfo[] = []
 
     const streamCallback: StreamCallback = {
       onContent: (content: string) => {
         fullContent += content
         callback.onStreamContent(fullContent)
       },
-      onToolCalls: (toolCalls: ToolCall[]) => {
+      onToolUse: (toolCalls: ToolCallInfo[]) => {
         pendingToolCalls = toolCalls
       },
-      onDone: async (finishReason: string) => {
-        if (finishReason === 'tool_calls' && pendingToolCalls.length > 0) {
-          // 保存 assistant 消息（含 tool_calls）
+      onDone: async (stopReason: string) => {
+        if (stopReason === 'tool_use' && pendingToolCalls.length > 0) {
+          // 保存 assistant 消息（含工具调用）
+          const toolCallsForStorage: ToolCall[] = pendingToolCalls.map(tc => ({
+            id: tc.id,
+            type: 'function' as const,
+            function: { name: tc.name, arguments: tc.inputJson }
+          }))
+
           await this.messageDao.create({
             sessionId: sessionId,
             role: 'assistant',
             content: fullContent || '',
             createdAt: Date.now(),
-            toolCalls: pendingToolCalls
+            toolCalls: toolCallsForStorage
           })
           await this.sessionDao.incrementMessageCount(sessionId)
 
-          // 执行工具并追加 tool messages
+          // 构建 assistant 消息的 content blocks
+          const assistantBlocks: ContentBlock[] = []
+          if (fullContent.length > 0) {
+            assistantBlocks.push({ type: 'text', text: fullContent } as TextBlock)
+          }
           for (const tc of pendingToolCalls) {
-            callback.onToolExecuting(tc.function.name)
-            const result = await this.toolRegistry.executeTool(tc.id, tc.function.name, tc.function.arguments)
+            let input: object = {}
+            try {
+              input = JSON.parse(tc.inputJson) as object
+            } catch {
+              // 忽略
+            }
+            assistantBlocks.push({
+              type: 'tool_use',
+              id: tc.id,
+              name: tc.name,
+              input: input
+            } as ToolUseBlock)
+          }
+          claudeMessages.push({ role: 'assistant', content: assistantBlocks })
+
+          // 执行工具，收集结果
+          const toolResultBlocks: ContentBlock[] = []
+          for (const tc of pendingToolCalls) {
+            callback.onToolExecuting(tc.name)
+            const result = await this.toolRegistry.executeTool(tc.id, tc.name, tc.inputJson)
+
+            // 保存 tool 消息到数据库
             await this.messageDao.create({
               sessionId: sessionId,
               role: 'tool',
@@ -144,24 +186,22 @@ export class ChatService {
             })
             await this.sessionDao.incrementMessageCount(sessionId)
 
-            llmMessages.push({
-              role: 'assistant',
-              content: fullContent || null,
-              tool_calls: pendingToolCalls
-            })
-            llmMessages.push({
-              role: 'tool',
-              content: result.content,
-              tool_call_id: tc.id
-            })
+            toolResultBlocks.push({
+              type: 'tool_result',
+              tool_use_id: tc.id,
+              content: result.content
+            } as ToolResultBlock)
           }
 
-          // 继续下一轮对话
+          // Claude 格式：tool_result 放在 user 消息中
+          claudeMessages.push({ role: 'user', content: toolResultBlocks })
+
+          // 继续下一轮
           fullContent = ''
           pendingToolCalls = []
-          await this.chatLoop(sessionId, llmMessages, callback, round + 1)
+          await this.chatLoop(sessionId, systemPrompt, claudeMessages, callback, round + 1)
         } else {
-          // 最终回复，保存 assistant 消息
+          // 最终回复
           if (fullContent.length > 0) {
             await this.messageDao.create({
               sessionId: sessionId,
@@ -170,8 +210,6 @@ export class ChatService {
               createdAt: Date.now()
             })
             await this.sessionDao.incrementMessageCount(sessionId)
-
-            // 提取记忆标记
             this.extractMemoryMarks(fullContent, sessionId)
           }
           callback.onStreamDone(fullContent)
@@ -186,30 +224,75 @@ export class ChatService {
     await this.llmClient.chatStream(request, streamCallback)
   }
 
-  private buildLLMMessages(systemPrompt: string, history: ChatMessage[]): LLMMessage[] {
-    const messages: LLMMessage[] = [
-      { role: 'system', content: systemPrompt }
-    ]
+  private buildClaudeMessages(history: ChatMessage[]): ClaudeMessage[] {
+    const messages: ClaudeMessage[] = []
 
-    for (const msg of history) {
-      const llmMsg: LLMMessage = {
-        role: msg.role,
-        content: msg.content
+    let i = 0
+    while (i < history.length) {
+      const msg = history[i]
+
+      if (msg.role === 'user') {
+        messages.push({ role: 'user', content: msg.content })
+      } else if (msg.role === 'assistant') {
+        if (msg.toolCalls && msg.toolCalls.length > 0) {
+          // assistant 带工具调用 → content blocks
+          const blocks: ContentBlock[] = []
+          if (msg.content.length > 0) {
+            blocks.push({ type: 'text', text: msg.content } as TextBlock)
+          }
+          for (const tc of msg.toolCalls) {
+            let input: object = {}
+            try {
+              input = JSON.parse(tc.function.arguments) as object
+            } catch {
+              // 忽略
+            }
+            blocks.push({
+              type: 'tool_use',
+              id: tc.id,
+              name: tc.function.name,
+              input: input
+            } as ToolUseBlock)
+          }
+          messages.push({ role: 'assistant', content: blocks })
+
+          // 后续的 tool 消息收集为 tool_result blocks
+          const resultBlocks: ContentBlock[] = []
+          let j = i + 1
+          while (j < history.length && history[j].role === 'tool') {
+            resultBlocks.push({
+              type: 'tool_result',
+              tool_use_id: history[j].toolCallId || '',
+              content: history[j].content
+            } as ToolResultBlock)
+            j++
+          }
+          if (resultBlocks.length > 0) {
+            messages.push({ role: 'user', content: resultBlocks })
+          }
+          i = j
+          continue
+        } else {
+          messages.push({ role: 'assistant', content: msg.content })
+        }
       }
-      if (msg.toolCalls && msg.toolCalls.length > 0) {
-        llmMsg.tool_calls = msg.toolCalls
-      }
-      if (msg.toolCallId) {
-        llmMsg.tool_call_id = msg.toolCallId
-      }
-      messages.push(llmMsg)
+      // tool 消息如果没被上面的循环处理，跳过
+      i++
     }
 
     return messages
   }
 
+  private getClaudeTools(): ClaudeToolDefinition[] {
+    const oldDefs = this.toolRegistry.getAllDefinitions()
+    return oldDefs.map(def => ({
+      name: def.function.name,
+      description: def.function.description,
+      input_schema: def.function.parameters
+    }))
+  }
+
   private async extractMemoryMarks(content: string, sessionId: number): Promise<void> {
-    // 提取 [SAVE_MEMORY:category:content] 标记
     const memoryRegex = /\[SAVE_MEMORY:(\w+):([^\]]+)\]/g
     let match = memoryRegex.exec(content)
     while (match !== null) {
