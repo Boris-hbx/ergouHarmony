@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@fission-ai/openspec-hw2": "file:../openspec-hw-zhifei"
+  }
+}

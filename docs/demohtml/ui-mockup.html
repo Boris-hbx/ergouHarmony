@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二狗鸿蒙版 UI 草稿 v3</title>
+<script>
+function saveFeedback(id) {
+  const ta = document.getElementById('fb-' + id);
+  const btn = document.getElementById('btn-' + id);
+  if (!ta) return;
+  localStorage.setItem('ergou-fb-' + id, ta.value);
+  btn.textContent = '已保存 ✓';
+  btn.style.background = '#64BB5C';
+  setTimeout(() => { btn.textContent = '保存'; btn.style.background = ''; }, 1500);
+}
+function loadAllFeedback() {
+  document.querySelectorAll('.fb-area').forEach(ta => {
+    const id = ta.id.replace('fb-', '');
+    const saved = localStorage.getItem('ergou-fb-' + id);
+    if (saved) ta.value = saved;
+  });
+}
+function exportAllFeedback() {
+  const data = {};
+  document.querySelectorAll('.fb-area').forEach(ta => {
+    const id = ta.id.replace('fb-', '');
+    if (ta.value.trim()) data[id] = ta.value.trim();
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ui-feedback.json';
+  a.click();
+}
+window.addEventListener('load', loadAllFeedback);
+</script>
+<style>
+:root {
+  --primary: #0A59F7;
+  --primary-light: #E8F0FE;
+  --bg: #F1F3F5;
+  --card: #FFFFFF;
+  --text: #182431;
+  --text2: rgba(24,36,49,0.6);
+  --text3: rgba(24,36,49,0.4);
+  --divider: rgba(24,36,49,0.08);
+  --danger: #E84026;
+  --success: #64BB5C;
+  --purple: #B07CD8;
+  --radius: 16px;
+  --radius-sm: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: "HarmonyOS Sans", -apple-system, "PingFang SC", sans-serif;
+  background: #EAEEF3; color: var(--text); line-height:1.5;
+  display: flex; min-height:100vh;
+}
+
+/* ===== LEFT NAV ===== */
+.side-nav {
+  width: 220px; background: #1E2A3A; color: #fff;
+  position: fixed; left:0; top:0; bottom:0; z-index:100;
+  overflow-y: auto; padding: 20px 0;
+  flex-shrink: 0;
+}
+.side-nav h2 {
+  font-size:16px; padding:0 20px 16px; border-bottom:1px solid rgba(255,255,255,0.1);
+  margin-bottom:8px; font-weight:700;
+}
+.side-nav .nav-group { padding:8px 0; }
+.side-nav .nav-group-title {
+  font-size:11px; color:rgba(255,255,255,0.4); padding:4px 20px;
+  text-transform:uppercase; letter-spacing:1px;
+}
+.side-nav a {
+  display:block; padding:8px 20px; font-size:13px; color:rgba(255,255,255,0.7);
+  text-decoration:none; transition: all 0.15s; border-left:3px solid transparent;
+}
+.side-nav a:hover { background:rgba(255,255,255,0.08); color:#fff; }
+.side-nav a.active { background:rgba(10,89,247,0.2); color:#70AFFF; border-left-color:#70AFFF; }
+.side-nav .badge {
+  font-size:10px; background:rgba(255,255,255,0.15); padding:1px 6px;
+  border-radius:8px; margin-left:6px; vertical-align:middle;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main { margin-left:220px; flex:1; padding:32px; }
+
+/* ===== SECTION ===== */
+.screen-section {
+  background: var(--card); border-radius:12px; margin-bottom:32px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06); scroll-margin-top:20px;
+  overflow:hidden;
+}
+.section-title-bar {
+  display:flex; align-items:center; gap:12px;
+  padding:20px 28px; border-bottom:1px solid var(--divider);
+  background:#FAFBFC;
+}
+.section-title-bar h2 { font-size:18px; font-weight:700; }
+.section-title-bar .num {
+  width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;
+}
+.section-body {
+  display:flex; gap:0;
+}
+
+/* Left: screenshot */
+.screenshot-col {
+  width:340px; flex-shrink:0; padding:24px;
+  background:#F7F8FA; border-right:1px solid var(--divider);
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.screenshot-col img {
+  width:280px; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.12);
+}
+.screenshot-col .caption {
+  font-size:11px; color:var(--text2); text-align:center;
+}
+
+/* Right: design specs */
+.design-col {
+  flex:1; padding:24px 28px; min-width:0;
+}
+.design-col h3 {
+  font-size:15px; font-weight:700; margin:0 0 12px; padding-bottom:8px;
+  border-bottom:1px solid var(--divider);
+}
+.design-col h3:not(:first-child) { margin-top:24px; }
+
+/* Spec table */
+.spec { width:100%; border-collapse:collapse; margin-bottom:16px; }
+.spec th {
+  text-align:left; font-size:11px; color:var(--text2); padding:6px 0;
+  border-bottom:1px solid var(--divider); font-weight:600;
+}
+.spec td {
+  font-size:13px; padding:6px 0; border-bottom:1px solid var(--divider);
+  vertical-align:top;
+}
+.spec td:first-child { width:120px; font-weight:500; color:var(--text2); white-space:nowrap; padding-right:12px; }
+.spec code {
+  background:var(--bg); padding:1px 5px; border-radius:3px;
+  font-size:11px; font-family:"JetBrains Mono",monospace;
+}
+.spec .color-dot {
+  display:inline-block; width:12px; height:12px; border-radius:3px;
+  vertical-align:middle; margin-right:4px; border:1px solid rgba(0,0,0,0.1);
+}
+
+/* Phone mockup (compact) */
+.phone-mini {
+  width:260px; background:var(--card); border-radius:28px; border:2.5px solid #333;
+  overflow:hidden; margin:0 auto; box-shadow:0 4px 20px rgba(0,0,0,0.12);
+  display:flex; flex-direction:column;
+}
+.pm-status {
+  height:32px; background:var(--card); display:flex; align-items:center;
+  justify-content:space-between; padding:0 16px; font-size:11px; font-weight:600;
+}
+.pm-topbar {
+  height:40px; background:var(--card); display:flex; align-items:center;
+  padding:0 12px; flex-shrink:0;
+}
+.pm-topbar .ham { display:flex; flex-direction:column; gap:2.5px; cursor:pointer; padding:4px; }
+.pm-topbar .ham span { display:block; width:14px; height:1.5px; background:var(--text); border-radius:1px; }
+.pm-topbar .title { font-size:15px; font-weight:700; margin-left:8px; flex:1; }
+.pm-topbar .act { font-size:14px; padding:4px; color:var(--text2); }
+.pm-body { flex:1; overflow:hidden; background:var(--card); }
+
+/* Chat elements (mini) */
+.m-msgs { padding:8px 10px; display:flex; flex-direction:column; gap:10px; }
+.m-row { display:flex; max-width:85%; }
+.m-row.u { align-self:flex-end; }
+.m-row.a { align-self:flex-start; }
+.m-bub {
+  padding:7px 10px; border-radius:12px; font-size:11px; line-height:1.5; word-break:break-word;
+}
+.m-row.u .m-bub { background:#DCE8FF; border-bottom-right-radius:3px; }
+.m-row.a .m-bub { background:#F2F3F5; border-bottom-left-radius:3px; }
+.m-acts { display:flex; gap:8px; font-size:11px; color:var(--text3); margin-top:4px; padding-left:2px; }
+.m-tool {
+  background:#F0F7FF; border:1px solid #D6E8FC; border-radius:6px;
+  padding:5px 8px; font-size:10px; color:var(--primary); margin-top:6px;
+}
+.m-tool b { font-size:9px; }
+.streaming::after { content:'|'; animation:blink .8s infinite; color:var(--primary); font-weight:700; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* Shortcut bar */
+.m-shortcuts {
+  display:flex; gap:5px; padding:5px 10px; border-top:1px solid var(--divider);
+  overflow-x:auto; background:var(--card);
+}
+.m-sc {
+  padding:3px 10px; border-radius:12px; font-size:10px; white-space:nowrap;
+  border:1px solid #ddd; background:var(--card); color:var(--text);
+}
+.m-sc.off { color:#ccc; border-color:#eee; }
+.m-sc.on { background:var(--primary-light); border-color:var(--primary); color:var(--primary); }
+
+/* Input bar */
+.m-input {
+  display:flex; align-items:center; gap:6px; padding:6px 8px; background:var(--card);
+}
+.m-input input {
+  flex:1; height:28px; background:var(--bg); border:none; border-radius:14px;
+  padding:0 10px; font-size:11px; outline:none;
+}
+.m-input .send {
+  width:28px; height:28px; border-radius:50%; border:none;
+  font-size:12px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.m-input .send.on { background:var(--primary); color:#fff; }
+.m-input .send.off { background:transparent; color:#ccc; }
+
+/* Drawer mini */
+.m-drawer {
+  display:flex; height:100%;
+}
+.m-drawer-panel {
+  width:180px; background:var(--card); padding:36px 0 12px; display:flex; flex-direction:column;
+  box-shadow:2px 0 10px rgba(0,0,0,0.08);
+}
+.m-drawer-overlay { flex:1; background:rgba(0,0,0,0.35); }
+.m-dh { padding:0 14px 12px; border-bottom:1px solid var(--divider); }
+.m-dh .av {
+  width:36px; height:36px; border-radius:50%; background:var(--primary); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:6px;
+}
+.m-dh .nm { font-size:13px; font-weight:700; }
+.m-dh .sub { font-size:9px; color:var(--text3); }
+.m-dm { flex:1; padding:6px 0; overflow:hidden; }
+.m-di {
+  display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:12px;
+}
+.m-di.act { background:var(--primary-light); color:var(--primary); font-weight:600; }
+.m-di .ico { width:24px; height:24px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+.m-di .bdg { font-size:8px; color:var(--text3); margin-left:auto; background:var(--bg); padding:1px 5px; border-radius:6px; }
+.m-dsep { height:1px; background:var(--divider); margin:4px 14px; }
+.m-di.dim { opacity:0.4; }
+
+/* Expense list mini */
+.m-exp-top { display:flex; align-items:center; gap:6px; padding:0 12px; }
+.m-exp-top .back { font-size:14px; color:var(--text); }
+.m-exp-top .t { font-size:15px; font-weight:700; }
+.m-toggle {
+  display:flex; background:var(--bg); border-radius:14px; padding:2px; margin-left:auto;
+}
+.m-toggle span {
+  padding:2px 10px; font-size:10px; border-radius:12px; cursor:pointer;
+}
+.m-toggle span.sel { background:var(--card); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+.m-month {
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  padding:8px 0; font-size:13px; font-weight:600;
+}
+.m-month .arr { color:var(--text2); cursor:pointer; }
+.m-total { display:flex; justify-content:space-between; padding:0 12px 8px; }
+.m-total .label { font-size:12px; color:var(--text2); }
+.m-total .amt { font-size:22px; font-weight:700; }
+.m-tags { display:flex; gap:4px; padding:4px 12px; overflow-x:auto; }
+.m-tag {
+  padding:3px 8px; border-radius:10px; font-size:9px; white-space:nowrap;
+  border:1px solid var(--divider); background:var(--card);
+}
+.m-tag.sel { background:var(--primary-light); border-color:var(--primary); color:var(--primary); font-weight:500; }
+.m-dg { padding:0 12px; margin-bottom:10px; }
+.m-dg-h {
+  display:flex; justify-content:space-between; padding:6px 0; font-size:10px;
+  font-weight:600; color:var(--text2); border-bottom:1px solid var(--divider);
+}
+.m-ec {
+  display:flex; align-items:center; gap:8px; padding:8px; margin-top:4px;
+  background:var(--bg); border-radius:6px;
+}
+.m-ec .ico { font-size:10px; }
+.m-ec .info { flex:1; }
+.m-ec .nm { font-size:11px; font-weight:500; }
+.m-ec .tg {
+  display:inline-block; font-size:8px; padding:1px 4px; border-radius:4px;
+  background:rgba(10,89,247,0.1); color:var(--primary); margin-left:4px;
+}
+.m-ec .dt { font-size:9px; color:var(--text3); }
+.m-ec .am { font-size:12px; font-weight:700; text-align:right; }
+.m-ec .cam { font-size:9px; color:var(--text3); }
+.m-fab {
+  position:absolute; bottom:10px; right:12px; width:36px; height:36px;
+  border-radius:50%; background:var(--primary); color:#fff; font-size:20px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 2px 8px rgba(10,89,247,0.3);
+}
+
+/* Add expense dialog mini */
+.m-dialog-bg { position:absolute; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:flex-end; }
+.m-dialog {
+  width:100%; background:var(--card); border-radius:16px 16px 0 0;
+  padding:14px 14px 18px;
+}
+.m-dialog .dtitle { font-size:14px; font-weight:700; text-align:center; margin-bottom:12px; display:flex; justify-content:space-between; }
+.m-fg { margin-bottom:10px; }
+.m-fg .fl { font-size:9px; color:var(--text2); margin-bottom:3px; }
+.m-fg input, .m-fg textarea {
+  width:100%; height:28px; background:var(--bg); border:1px solid transparent;
+  border-radius:4px; padding:0 8px; font-size:11px; outline:none; font-family:inherit;
+}
+.m-fg textarea { height:40px; padding:6px 8px; resize:none; }
+.m-cur { display:flex; gap:4px; }
+.m-cur span {
+  flex:1; height:24px; border:1px solid var(--divider); border-radius:4px;
+  display:flex; align-items:center; justify-content:center; font-size:10px;
+}
+.m-cur span.sel { border-color:var(--primary); color:var(--primary); background:var(--primary-light); font-weight:600; }
+.m-photo { display:flex; gap:6px; margin-top:4px; }
+.m-photo .pb {
+  width:40px; height:40px; border:1px dashed var(--divider); border-radius:4px;
+  display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--text3);
+}
+.m-ergou-btn {
+  width:100%; height:30px; border-radius:15px; border:none;
+  background:var(--purple); color:#fff; font-size:11px; font-weight:600;
+  margin:8px 0; opacity:0.85; cursor:pointer;
+}
+.m-dbtn { display:flex; gap:8px; }
+.m-dbtn button {
+  flex:1; height:28px; border-radius:14px; border:none; font-size:11px; cursor:pointer;
+}
+.m-dbtn .cancel { background:var(--bg); color:var(--text2); }
+.m-dbtn .save { background:var(--primary); color:#fff; }
+.m-dbtn .del { background:transparent; color:var(--danger); font-weight:600; }
+
+/* Action sheet mini */
+.m-sheet {
+  position:absolute; bottom:0; left:0; right:0;
+  background:var(--card); border-radius:12px 12px 0 0;
+  padding:12px 14px 20px; box-shadow:0 -2px 10px rgba(0,0,0,0.1);
+}
+.m-sheet .handle {
+  width:32px; height:3px; background:#ddd; border-radius:2px;
+  margin:0 auto 8px;
+}
+.m-sheet .stitle { font-size:12px; font-weight:500; padding-bottom:8px; border-bottom:1px solid var(--divider); }
+.m-sheet .sitem {
+  display:flex; align-items:center; gap:10px; padding:10px 0;
+  font-size:12px; border-bottom:1px solid var(--divider);
+}
+.m-sheet .sitem .si-ico { font-size:14px; }
+.m-sheet .sitem.del { color:var(--danger); }
+.m-sheet .sitem .si-bdg { font-size:9px; color:var(--text3); margin-left:4px; }
+
+/* Settings mini */
+.m-set-group { padding:0 12px; margin-bottom:12px; }
+.m-set-group .sg-title { font-size:10px; color:var(--primary); font-weight:600; padding:8px 0 4px; }
+.m-set-item {
+  display:flex; align-items:center; gap:10px; padding:8px 0;
+  border-bottom:1px solid var(--divider);
+}
+.m-set-item .si-ico {
+  width:28px; height:28px; border-radius:50%; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; font-size:14px;
+}
+.m-set-item .si-info { flex:1; }
+.m-set-item .si-name { font-size:12px; font-weight:500; }
+.m-set-item .si-desc { font-size:9px; color:var(--text3); }
+
+/* Feature hub mini */
+.m-hub-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px;
+}
+.m-hub-card {
+  background:var(--bg); border-radius:8px; padding:16px 8px;
+  text-align:center;
+}
+.m-hub-card .hico { font-size:24px; margin-bottom:6px; }
+.m-hub-card .hname { font-size:12px; font-weight:600; }
+.m-hub-card .hdesc { font-size:9px; color:var(--text3); margin-top:2px; }
+.m-hub-card.dim { opacity:0.4; }
+
+/* Recycle bin mini */
+.m-recycle { padding:12px; }
+.m-recycle .rtitle { display:flex; justify-content:space-between; margin-bottom:4px; }
+.m-recycle .rtitle span:first-child { font-size:14px; font-weight:700; }
+.m-recycle .rtitle span:last-child { font-size:11px; color:var(--primary); cursor:pointer; }
+.m-recycle .rsub { font-size:9px; color:var(--text3); margin-bottom:8px; }
+.m-ri {
+  display:flex; align-items:center; padding:8px 0;
+  border-bottom:1px solid var(--divider); font-size:11px;
+}
+.m-ri .ri-info { flex:1; }
+.m-ri .ri-nm { font-weight:500; }
+.m-ri .ri-meta { font-size:9px; color:var(--primary); }
+.m-ri .ri-date { font-size:9px; color:var(--text3); }
+.m-ri .ri-btn { font-size:10px; color:var(--primary); cursor:pointer; font-weight:500; }
+
+/* Notes */
+.note {
+  background:#FFF8E1; border-left:3px solid #FFB300; padding:8px 12px;
+  border-radius:0 6px 6px 0; font-size:12px; margin:12px 0; color:#5D4037;
+}
+.note strong { color:#E65100; }
+.diff-tag {
+  display:inline-block; font-size:9px; padding:1px 6px; border-radius:4px;
+  font-weight:600; vertical-align:middle; margin-left:4px;
+}
+.diff-tag.keep { background:#E8F5E9; color:#2E7D32; }
+.diff-tag.change { background:#FFF3E0; color:#E65100; }
+.diff-tag.new { background:#E3F2FD; color:#1565C0; }
+.diff-tag.skip { background:#F3E5F5; color:#7B1FA2; }
+
+/* ===== FEEDBACK COLUMN ===== */
+.feedback-col {
+  width:260px; flex-shrink:0; padding:16px;
+  background:#FFFEF5; border-left:1px solid var(--divider);
+  display:flex; flex-direction:column; gap:8px;
+}
+.feedback-col .fb-title {
+  font-size:12px; font-weight:700; color:#B8860B;
+  display:flex; align-items:center; gap:4px;
+}
+.fb-area {
+  flex:1; min-height:120px; width:100%; border:1.5px solid #E8D88C;
+  border-radius:8px; padding:10px; font-size:13px; line-height:1.6;
+  outline:none; resize:vertical; font-family:inherit;
+  background:#FFFEF5; color:var(--text); transition:border-color 0.2s;
+}
+.fb-area:focus { border-color:#D4A017; }
+.fb-area::placeholder { color:#C9B86C; font-size:12px; }
+.fb-save {
+  align-self:flex-end; padding:6px 20px; border-radius:14px;
+  border:none; background:#D4A017; color:#fff; font-size:12px;
+  font-weight:600; cursor:pointer; transition:all 0.2s;
+}
+.fb-save:hover { background:#B8860B; }
+.fb-saved-hint {
+  font-size:10px; color:#B8860B; text-align:right;
+}
+.export-btn {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:6px 14px; border-radius:14px; border:1.5px solid #D4A017;
+  background:#FFFEF5; color:#B8860B; font-size:12px; font-weight:600;
+  cursor:pointer; transition:all 0.2s; margin-left:12px;
+}
+.export-btn:hover { background:#D4A017; color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- ===== LEFT NAV ===== -->
+<nav class="side-nav">
+  <h2>🐕 二狗鸿蒙版</h2>
+  <div class="nav-group">
+    <div class="nav-group-title">对话</div>
+    <a href="#chat">1. 对话主页</a>
+    <a href="#drawer">2. 侧边功能区</a>
+    <a href="#chat-tool">3. 对话中记账</a>
+    <a href="#empty">4. 空状态/欢迎页</a>
+    <a href="#history">5. 会话历史</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">记账</div>
+    <a href="#expense-list">6. 记账列表</a>
+    <a href="#expense-add">7. 记一笔</a>
+    <a href="#expense-edit">8. 编辑账单</a>
+    <a href="#expense-action">9. 条目操作</a>
+    <a href="#expense-bin">10. 回收站</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">其他</div>
+    <a href="#settings">11. 设置页</a>
+    <a href="#hub">12. 功能广场</a>
+    <a href="#setup">13. 首次启动</a>
+  </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+
+<div style="margin-bottom:24px;">
+  <h1 style="font-size:24px;">二狗鸿蒙版 UI 设计草稿</h1>
+  <p style="font-size:13px;color:var(--text2);margin-top:4px;">
+    目标：华为 Pura X · HarmonyOS 6.0.0 · API 20+ · ArkUI · 1260×2844
+    &nbsp;|&nbsp; 左 = Android 截图 &nbsp;|&nbsp; 中 = 鸿蒙设计 &nbsp;|&nbsp; 右 = 你的意见
+  </p>
+  <p style="margin-top:8px;">
+    <button class="export-btn" onclick="exportAllFeedback()">📥 导出全部意见为 JSON</button>
+    <span style="font-size:11px;color:var(--text3);margin-left:8px;">意见自动保存在浏览器 localStorage，也可导出为文件</span>
+  </p>
+</div>
+
+<!-- ============================================================ -->
+<!-- 1. 对话主页 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="chat">
+  <div class="section-title-bar">
+    <span class="num">1</span>
+    <h2>对话主页</h2>
+    <span class="diff-tag keep">核心页面</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311095330_63_2.jpg" alt="Android 对话主页" />
+      <div class="caption">Android 版 · 对话主页</div>
+    </div>
+    <div class="design-col">
+      <h3>布局结构</h3>
+      <table class="spec">
+        <tr><td>顶栏</td><td>左: ≡ 汉堡菜单 + "二狗" 标题；右: 🕐历史 + ⚙设置</td></tr>
+        <tr><td>顶栏组件</td><td>自定义 <code>Row</code>，高度 52vp，白色背景，无底边框</td></tr>
+        <tr><td>消息区</td><td><code>List</code> 组件，白色背景，<code>initialIndex</code> 末尾</td></tr>
+        <tr><td>快捷栏</td><td>输入框上方，<code>Scroll</code> 横向，<code>scrollBar(BarState.Off)</code></td></tr>
+        <tr><td>输入栏</td><td><code>Row</code>：<code>TextInput</code> + 发送 <code>Button</code></td></tr>
+        <tr><td>无底部Tab</td><td>所有功能通过 ≡ 抽屉菜单进入</td></tr>
+      </table>
+
+      <h3>消息气泡</h3>
+      <table class="spec">
+        <tr><td>用户气泡</td><td>右对齐，<span class="color-dot" style="background:#DCE8FF;"></span><code>#DCE8FF</code> 淡蓝，黑字，圆角 16vp（右下 4vp）</td></tr>
+        <tr><td>助手气泡</td><td>左对齐，<span class="color-dot" style="background:#F2F3F5;"></span><code>#F2F3F5</code> 浅灰，黑字，圆角 16vp（左下 4vp）</td></tr>
+        <tr><td>字号</td><td>15fp，行高 1.7</td></tr>
+        <tr><td>消息操作</td><td>assistant 下方：📋复制 👍点赞 👎点踩 🔄重新生成，16vp 图标</td></tr>
+        <tr><td>流式显示</td><td>逐字追加，末尾闪烁 <code>|</code> 光标</td></tr>
+        <tr><td>Markdown</td><td>支持加粗、列表、代码块、引用</td></tr>
+      </table>
+
+      <h3>快捷栏 Chip</h3>
+      <table class="spec">
+        <tr><td>圆角</td><td>18vp</td></tr>
+        <tr><td>字号</td><td>14fp</td></tr>
+        <tr><td>间距</td><td>横向 8vp</td></tr>
+        <tr><td>边框</td><td>1px <code>#DDD</code></td></tr>
+        <tr><td>首期可用</td><td>"记账" 正常色；任务/例行/出差/英语/养生 灰色 disabled</td></tr>
+        <tr><td>点击行为</td><td>记账 → 跳转记账页（或输入框填充引导语）</td></tr>
+      </table>
+
+      <h3>输入栏</h3>
+      <table class="spec">
+        <tr><td>输入框</td><td><code>TextInput</code>，圆角 20vp，<span class="color-dot" style="background:#F1F3F5;"></span><code>#F1F3F5</code> 背景</td></tr>
+        <tr><td>高度</td><td>最小 40vp，最大 100vp，多行自适应</td></tr>
+        <tr><td>发送按钮</td><td>40×40vp 圆形。有内容: <span class="color-dot" style="background:#0A59F7;"></span>蓝色 ▶；空: 灰色 disabled</td></tr>
+        <tr><td>停止按钮</td><td>流式生成中 → 按钮变红色 ■（停止）</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:520px;">
+        <div class="pm-status"><span>09:51</span><span style="font-size:9px;">5G 🔋62</span></div>
+        <div class="pm-topbar">
+          <div class="ham"><span></span><span></span><span></span></div>
+          <span class="title">二狗</span>
+          <span class="act">🕐</span>
+          <span class="act">⚙</span>
+        </div>
+        <div class="pm-body" style="flex:1;overflow-y:auto;">
+          <div class="m-msgs">
+            <div class="m-row u"><div class="m-bub">你好</div></div>
+            <div class="m-row a">
+              <div>
+                <div class="m-bub">主人，早安。<br><br>今日是三月十一日——<b>徽的生日</b>。二〇一四年生人，今日整十二岁。<br><br>此事当先记挂。可有什么安排？</div>
+                <div class="m-acts"><span>📋</span><span>👍</span><span>👎</span><span>🔄</span></div>
+              </div>
+            </div>
+            <div class="m-row u"><div class="m-bub">帮我记一笔午饭35块</div></div>
+            <div class="m-row a"><div class="m-bub streaming">好的，帮你记上了</div></div>
+          </div>
+        </div>
+        <div class="m-shortcuts">
+          <span class="m-sc off">任务</span><span class="m-sc off">例行</span>
+          <span class="m-sc on">记账</span><span class="m-sc off">出差</span>
+          <span class="m-sc off">英语</span><span class="m-sc off">养生</span>
+        </div>
+        <div class="m-input">
+          <input placeholder="说点什么..." readonly />
+          <div class="send off">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-chat" placeholder="对「1. 对话主页」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-chat" onclick="saveFeedback('chat')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 2. 侧边功能区 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="drawer">
+  <div class="section-title-bar">
+    <span class="num">2</span>
+    <h2>侧边功能区（≡ 抽屉）</h2>
+    <span class="diff-tag change">替代功能广场入口</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114201_70_2.jpg" alt="Android 功能广场" />
+      <div class="caption">Android 版 · 功能广场（2×3 宫格）</div>
+    </div>
+    <div class="design-col">
+      <h3>设计说明</h3>
+      <div class="note">
+        <strong>鸿蒙版变更：</strong>Android 版用独立的"功能广场"页面（2×3 宫格），鸿蒙版改为左侧滑出抽屉。
+        更符合单手操作习惯，减少页面跳转层级。
+      </div>
+
+      <table class="spec">
+        <tr><td>触发</td><td>点击顶栏 ≡ 汉堡菜单</td></tr>
+        <tr><td>组件</td><td>自定义 <code>Panel</code> 或 <code>SideBarContainer</code></td></tr>
+        <tr><td>宽度</td><td>280vp</td></tr>
+        <tr><td>遮罩</td><td><code>rgba(0,0,0,0.4)</code>，点击关闭</td></tr>
+        <tr><td>头部</td><td>头像 56vp + 名称 + 版本</td></tr>
+        <tr><td>可用项</td><td>💬 对话（高亮）、💰 记账</td></tr>
+        <tr><td>待开发项</td><td>📝任务、📅例行、✈️出差、🔤英语、🧘养生 → 灰色 + badge</td></tr>
+        <tr><td>底部</td><td>⚙ 设置</td></tr>
+        <tr><td>关闭</td><td>点击遮罩 / 左滑 / 选择菜单项</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:460px;">
+        <div class="pm-status"><span>09:51</span><span style="font-size:9px;">5G 🔋62</span></div>
+        <div class="pm-body" style="flex:1;">
+          <div class="m-drawer" style="height:100%;">
+            <div class="m-drawer-panel">
+              <div class="m-dh">
+                <div class="av">🐕</div>
+                <div class="nm">二狗</div>
+                <div class="sub">私人 AI 助手 · v1.0</div>
+              </div>
+              <div class="m-dm">
+                <div class="m-di act"><span class="ico">💬</span> 对话</div>
+                <div class="m-di"><span class="ico">💰</span> 记账</div>
+                <div class="m-dsep"></div>
+                <div class="m-di dim"><span class="ico">📝</span> 任务 <span class="bdg">待开发</span></div>
+                <div class="m-di dim"><span class="ico">📅</span> 例行 <span class="bdg">待开发</span></div>
+                <div class="m-di dim"><span class="ico">✈️</span> 出差 <span class="bdg">待开发</span></div>
+                <div class="m-di dim"><span class="ico">🔤</span> 英语 <span class="bdg">待开发</span></div>
+                <div class="m-di dim"><span class="ico">🧘</span> 养生 <span class="bdg">待开发</span></div>
+                <div class="m-dsep"></div>
+                <div class="m-di"><span class="ico">⚙</span> 设置</div>
+              </div>
+            </div>
+            <div class="m-drawer-overlay"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-drawer" placeholder="对「2. 侧边功能区」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-drawer" onclick="saveFeedback('drawer')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 3. 对话中记账 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="chat-tool">
+  <div class="section-title-bar">
+    <span class="num">3</span>
+    <h2>对话中记账（工具调用）</h2>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311095330_63_2.jpg" alt="Android 对话" />
+      <div class="caption">Android 版 · 对话（工具调用参照）</div>
+    </div>
+    <div class="design-col">
+      <h3>工具调用卡片</h3>
+      <table class="spec">
+        <tr><td>位置</td><td>嵌在 assistant 气泡内部，回复文字上方</td></tr>
+        <tr><td>背景</td><td><span class="color-dot" style="background:#F0F7FF;"></span><code>#F0F7FF</code></td></tr>
+        <tr><td>边框</td><td>1px <code>#D6E8FC</code></td></tr>
+        <tr><td>标签</td><td>"🔧 调用工具: xxx"，11fp 加粗</td></tr>
+        <tr><td>结果</td><td>结构化文本：金额/备注/标签 + ✓已记录（绿色）</td></tr>
+        <tr><td>加载态</td><td>"执行中..." + 旋转动画</td></tr>
+        <tr><td>最终回复</td><td>工具完成后 LLM 生成自然语言确认</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:440px;">
+        <div class="pm-status"><span>10:35</span><span style="font-size:9px;">5G 🔋58</span></div>
+        <div class="pm-topbar">
+          <div class="ham"><span></span><span></span><span></span></div>
+          <span class="title">二狗</span>
+          <span class="act">🕐</span><span class="act">⚙</span>
+        </div>
+        <div class="pm-body" style="flex:1;overflow-y:auto;">
+          <div class="m-msgs">
+            <div class="m-row u"><div class="m-bub">帮我记一笔，午饭 35 块</div></div>
+            <div class="m-row a">
+              <div>
+                <div class="m-bub">
+                  <div class="m-tool"><b>🔧 add_expense</b><br>¥35.00 | 午饭 | #餐饮<br><span style="color:var(--success);">✓ 已记录</span></div>
+                  <div style="margin-top:6px;">记了：午饭 <b>¥35.00</b> #餐饮<br><span style="font-size:9px;color:var(--text3);">本月餐饮 ¥1,280（37%）</span></div>
+                </div>
+                <div class="m-acts"><span>📋</span><span>👍</span><span>👎</span><span>🔄</span></div>
+              </div>
+            </div>
+            <div class="m-row u"><div class="m-bub">这个月花了多少？</div></div>
+            <div class="m-row a">
+              <div>
+                <div class="m-bub">
+                  <div class="m-tool"><b>🔧 expense_summary</b><br>2026年3月 | ¥3,456.78 | 42笔</div>
+                  <div style="margin-top:6px;">3月共花 <b>¥3,456.78</b>（42笔）<br>1.餐饮¥1,280 2.交通¥856 3.购物¥534<br><em style="font-size:9px;">比上月+12%，当有所节制。</em></div>
+                </div>
+                <div class="m-acts"><span>📋</span><span>👍</span><span>👎</span><span>🔄</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="m-shortcuts">
+          <span class="m-sc off">任务</span><span class="m-sc off">例行</span>
+          <span class="m-sc on">记账</span><span class="m-sc off">出差</span>
+        </div>
+        <div class="m-input"><input placeholder="说点什么..." readonly /><div class="send off">▶</div></div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-chat-tool" placeholder="对「3. 对话中记账」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-chat-tool" onclick="saveFeedback('chat-tool')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 4. 空状态 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="empty">
+  <div class="section-title-bar">
+    <span class="num">4</span>
+    <h2>空状态 / 欢迎页</h2>
+    <span class="diff-tag new">鸿蒙新增</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col" style="justify-content:center;">
+      <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px;">
+        Android 版无独立空状态<br>（直接显示空消息列表）<br><br>鸿蒙版新增欢迎引导
+      </div>
+    </div>
+    <div class="design-col">
+      <h3>设计要点</h3>
+      <table class="spec">
+        <tr><td>触发</td><td>新建对话 / 首次进入，消息列表为空时显示</td></tr>
+        <tr><td>Logo</td><td>🐕 56fp 居中</td></tr>
+        <tr><td>欢迎语</td><td>"你好，我是二狗"（18fp 加粗）+ 副标题（14fp 灰色）</td></tr>
+        <tr><td>建议话题</td><td>2-3 个引导 Chip，<code>#F1F3F5</code> 背景，圆角 12vp，点击即发送</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:440px;">
+        <div class="pm-status"><span>09:50</span><span style="font-size:9px;">5G 🔋65</span></div>
+        <div class="pm-topbar">
+          <div class="ham"><span></span><span></span><span></span></div>
+          <span class="title">二狗</span>
+          <span class="act">🕐</span><span class="act">⚙</span>
+        </div>
+        <div class="pm-body" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+          <div style="font-size:36px;margin-bottom:8px;">🐕</div>
+          <div style="font-size:14px;font-weight:700;">你好，我是二狗</div>
+          <div style="font-size:10px;color:var(--text3);text-align:center;margin:4px 0 16px;">冷面私助，忠犬一只。<br>有事说事，无事也可聊聊。</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:6px;">
+            <div style="padding:8px 10px;background:var(--bg);border-radius:8px;font-size:10px;color:var(--text2);">💡 今天有什么安排建议？</div>
+            <div style="padding:8px 10px;background:var(--bg);border-radius:8px;font-size:10px;color:var(--text2);">📊 这个月花了多少钱？</div>
+            <div style="padding:8px 10px;background:var(--bg);border-radius:8px;font-size:10px;color:var(--text2);">📝 帮我记住一件事</div>
+          </div>
+        </div>
+        <div class="m-shortcuts">
+          <span class="m-sc off">任务</span><span class="m-sc off">例行</span>
+          <span class="m-sc on">记账</span><span class="m-sc off">出差</span>
+        </div>
+        <div class="m-input"><input placeholder="说点什么..." readonly /><div class="send off">▶</div></div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-empty" placeholder="对「4. 空状态」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-empty" onclick="saveFeedback('empty')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 5. 会话历史 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="history">
+  <div class="section-title-bar">
+    <span class="num">5</span>
+    <h2>会话历史</h2>
+    <span class="diff-tag keep">保持一致</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col" style="justify-content:center;">
+      <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px;">
+        Android 版通过顶栏 🕐 进入<br>（未提供截图）
+      </div>
+    </div>
+    <div class="design-col">
+      <h3>设计要点</h3>
+      <table class="spec">
+        <tr><td>入口</td><td>顶栏右侧 🕐 按钮</td></tr>
+        <tr><td>导航</td><td><code>router.pushUrl</code>，顶栏 ← 返回 + 标题 + 右侧 "+" 新建</td></tr>
+        <tr><td>列表项</td><td>💬图标 + 标题 + "N条消息 · 时间"</td></tr>
+        <tr><td>当前会话</td><td>左侧蓝色边框 3vp + "当前" 标签</td></tr>
+        <tr><td>排序</td><td>按 <code>updatedAt</code> 降序</td></tr>
+        <tr><td>操作</td><td>点击切换；<code>ListItem.swipeAction</code> 左滑删除</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:360px;">
+        <div class="pm-status"><span>10:40</span><span style="font-size:9px;">5G 🔋56</span></div>
+        <div class="pm-topbar">
+          <span class="act" style="font-size:16px;">←</span>
+          <span class="title" style="text-align:center;">历史对话</span>
+          <span class="act" style="font-size:16px;">+</span>
+        </div>
+        <div class="pm-body" style="flex:1;overflow-y:auto;padding:6px 10px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;border-left:2.5px solid var(--primary);">
+            <span style="font-size:14px;">💬</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:500;">今天适合做什么</div><div style="font-size:9px;color:var(--text3);">4条 · 10:32</div></div>
+            <span style="font-size:9px;color:var(--primary);font-weight:500;">当前</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;">
+            <span style="font-size:14px;">💬</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:500;">帮我翻译一段英文</div><div style="font-size:9px;color:var(--text3);">6条 · 昨天 21:15</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;">
+            <span style="font-size:14px;">💬</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:500;">这个月花了多少钱</div><div style="font-size:9px;color:var(--text3);">8条 · 3月9日</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;">
+            <span style="font-size:14px;">💬</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:500;">推荐投资书籍</div><div style="font-size:9px;color:var(--text3);">12条 · 3月7日</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-history" placeholder="对「5. 会话历史」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-history" onclick="saveFeedback('history')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 6. 记账列表 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="expense-list">
+  <div class="section-title-bar">
+    <span class="num">6</span>
+    <h2>记账列表</h2>
+    <span class="diff-tag keep">核心页面</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114056_65_2.jpg" alt="Android 记账列表" />
+      <div class="caption">Android 版 · 记账列表（月视图）</div>
+    </div>
+    <div class="design-col">
+      <h3>顶栏</h3>
+      <table class="spec">
+        <tr><td>布局</td><td>← 返回 + "记账" 标题 + [日|周|月] 切换 + 📊 统计按钮</td></tr>
+        <tr><td>时间切换</td><td><code>SegmentButton</code>，圆角 14vp，选中态白底+阴影</td></tr>
+        <tr><td>月份导航</td><td>"< 2026年3月 >" 箭头切换</td></tr>
+      </table>
+
+      <h3>摘要区</h3>
+      <table class="spec">
+        <tr><td>标签</td><td>"总支出"（12fp 灰色）</td></tr>
+        <tr><td>金额</td><td>22fp 加粗（如 <code>$766.36</code>）</td></tr>
+        <tr><td>对齐</td><td>左右分布：标签左，金额右</td></tr>
+      </table>
+
+      <h3>标签筛选</h3>
+      <table class="spec">
+        <tr><td>组件</td><td><code>Scroll</code> 横向 + Chip</td></tr>
+        <tr><td>Chip 样式</td><td>带 emoji 图标：🛒超市、🚗交通、💄日用、⛽加油 ...</td></tr>
+        <tr><td>选中态</td><td><span class="color-dot" style="background:#E8F0FE;"></span>蓝背景 + 蓝边框</td></tr>
+        <tr><td>数据来源</td><td><code>NextApiClient.getExpenseTags()</code> 动态获取</td></tr>
+      </table>
+
+      <h3>记账卡片</h3>
+      <table class="spec">
+        <tr><td>日期组头</td><td>"3月9日 周一" 左 + "$31.64" 右（当日小计）</td></tr>
+        <tr><td>卡片背景</td><td><span class="color-dot" style="background:#F1F3F5;"></span><code>#F1F3F5</code>，圆角 8vp</td></tr>
+        <tr><td>内容</td><td>标题 + 标签badge + 日期时间 | 📷凭证图标 + 金额</td></tr>
+        <tr><td>标签badge</td><td>小圆角色块，如 <span style="background:rgba(10,89,247,0.1);color:var(--primary);font-size:10px;padding:1px 4px;border-radius:3px;">超市</span></td></tr>
+        <tr><td>金额</td><td>右对齐，带 📷 表示有票据照片</td></tr>
+        <tr><td>点击</td><td>弹出底部操作 sheet（编辑/分享/删除）</td></tr>
+      </table>
+
+      <h3>浮动按钮</h3>
+      <table class="spec">
+        <tr><td>📷 按钮</td><td>拍照记账（调用相机 → 让二狗分析）<span class="diff-tag skip">首期可选</span></td></tr>
+        <tr><td>+ 按钮</td><td>手动记一笔，弹出添加弹窗</td></tr>
+        <tr><td>位置</td><td>右下角 52vp 圆形，<span class="color-dot" style="background:#0A59F7;"></span>蓝色</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:500px;position:relative;">
+        <div class="pm-status"><span>11:39</span><span style="font-size:9px;">5G 🔋46</span></div>
+        <div class="pm-topbar" style="gap:4px;">
+          <span class="act" style="font-size:14px;">←</span>
+          <span style="font-size:14px;font-weight:700;">记账</span>
+          <div class="m-toggle" style="margin-left:auto;">
+            <span>日</span><span>周</span><span class="sel">月</span>
+          </div>
+          <span class="act">📊</span>
+        </div>
+        <div class="pm-body" style="flex:1;overflow-y:auto;background:#FAFBFC;">
+          <div class="m-month"><span class="arr">&lt;</span> 2026年3月 <span class="arr">&gt;</span></div>
+          <div class="m-total"><span class="label">总支出</span><span class="amt">$766.36</span></div>
+          <div class="m-tags">
+            <span class="m-tag sel">全部</span><span class="m-tag">🛒 超市</span>
+            <span class="m-tag">🚗 交通</span><span class="m-tag">💄 日用</span><span class="m-tag">⛽ 加油</span>
+          </div>
+          <div class="m-dg">
+            <div class="m-dg-h"><span>3月9日 周一</span><span>$31.64</span></div>
+            <div class="m-ec">
+              <div class="info"><div class="nm">Dollarama <span class="tg">日用</span></div><div class="dt">2026-03-09 | 20:39</div></div>
+              <div><div class="am">📷 $31.64</div></div>
+            </div>
+          </div>
+          <div class="m-dg">
+            <div class="m-dg-h"><span>3月8日 周日</span><span>$357.37</span></div>
+            <div class="m-ec">
+              <div class="info"><div class="nm">Costco Wholesale <span class="tg">超市</span></div><div class="dt">2026-03-08 | 18:07</div></div>
+              <div><div class="am">📷 $259.04</div></div>
+            </div>
+            <div class="m-ec">
+              <div class="info"><div class="nm">Royal Botanical G. <span class="tg">交通</span></div><div class="dt">2026-03-08 | 14:27</div></div>
+              <div><div class="am">📷 $6.00</div></div>
+            </div>
+            <div class="m-ec">
+              <div class="info"><div class="nm">Costco #1414 <span class="tg">加油</span></div><div class="dt">2026-03-08 | 13:13</div></div>
+              <div><div class="am">📷 $87.83</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="m-fab">+</div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-expense-list" placeholder="对「6. 记账列表」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-expense-list" onclick="saveFeedback('expense-list')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 7. 记一笔 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="expense-add">
+  <div class="section-title-bar">
+    <span class="num">7</span>
+    <h2>记一笔（添加记账）</h2>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114059_67_2.jpg" alt="Android 记一笔" />
+      <div class="caption">Android 版 · 记一笔弹窗</div>
+    </div>
+    <div class="design-col">
+      <h3>弹窗结构</h3>
+      <table class="spec">
+        <tr><td>弹出方式</td><td><code>bindSheet</code> 底部半屏，圆角 24vp</td></tr>
+        <tr><td>标题栏</td><td>"记一笔" + × 关闭按钮</td></tr>
+        <tr><td>标题输入</td><td><code>TextInput</code>，placeholder "消费标题..."</td></tr>
+        <tr><td>金额</td><td>"金额" 标签 + 数字输入 + 货币切换 [CAD|CNY]</td></tr>
+        <tr><td>货币按钮</td><td>选中态: <span class="color-dot" style="background:#E8F0FE;"></span>蓝边框+蓝字；未选: 灰边框</td></tr>
+        <tr><td>日期/时间</td><td>📅日期选择 + 🕐票据时间（可选）</td></tr>
+        <tr><td>描述</td><td><code>TextArea</code> 多行，placeholder "添加描述..."</td></tr>
+        <tr><td>票据照片</td><td>[+] 相册选择 + [📷] 相机拍照，缩略图展示</td></tr>
+        <tr><td>分析按钮</td><td><span class="color-dot" style="background:#B07CD8;"></span>"让二狗分析" 紫色按钮（拍照后 AI 识别票据）</td></tr>
+        <tr><td>底部操作</td><td>取消（文字按钮）+ 保存（蓝色/灰色按钮，金额为空时 disabled）</td></tr>
+      </table>
+
+      <div class="note">
+        <strong>首期简化：</strong>票据照片和"让二狗分析"功能较复杂（需要相机权限+图片上传+多模态），
+        首期可只做基础字段（标题+金额+货币+日期+描述），照片功能后续迭代。
+      </div>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:460px;">
+        <div class="pm-status"><span>11:39</span><span style="font-size:9px;">5G 🔋46</span></div>
+        <div class="pm-body" style="flex:1;position:relative;">
+          <div class="m-dialog-bg">
+            <div class="m-dialog">
+              <div class="dtitle"><span>记一笔</span><span style="cursor:pointer;">✕</span></div>
+              <div class="m-fg"><div class="fl">标题</div><input placeholder="消费标题..." readonly /></div>
+              <div class="m-fg">
+                <div class="fl">金额</div>
+                <div style="display:flex;gap:4px;align-items:center;">
+                  <input placeholder="0.00" style="flex:1;" readonly />
+                  <div class="m-cur"><span class="sel">CAD</span><span>CNY</span></div>
+                </div>
+              </div>
+              <div class="m-fg">
+                <div class="fl">日期 / 时间</div>
+                <div style="display:flex;gap:4px;">
+                  <input value="2026-03-11" style="flex:1;" readonly />
+                  <input placeholder="票据时间" style="flex:1;" readonly />
+                </div>
+              </div>
+              <div class="m-fg"><div class="fl">描述</div><textarea placeholder="添加描述..." readonly></textarea></div>
+              <div class="m-fg">
+                <div class="fl">票据照片</div>
+                <div class="m-photo"><div class="pb">+</div><div class="pb">📷</div></div>
+              </div>
+              <button class="m-ergou-btn">让二狗分析</button>
+              <div class="m-dbtn">
+                <button class="cancel">取消</button>
+                <button class="save">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-expense-add" placeholder="对「7. 记一笔」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-expense-add" onclick="saveFeedback('expense-add')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 8. 编辑账单 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="expense-edit">
+  <div class="section-title-bar">
+    <span class="num">8</span>
+    <h2>编辑账单</h2>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114058_66_2.jpg" alt="Android 编辑账单" />
+      <div class="caption">Android 版 · 编辑账单（含明细+票据）</div>
+    </div>
+    <div class="design-col">
+      <h3>与"记一笔"的区别</h3>
+      <table class="spec">
+        <tr><td>标题</td><td>"编辑账单"（非"记一笔"）</td></tr>
+        <tr><td>字段预填</td><td>所有字段从已有记录填充</td></tr>
+        <tr><td>明细区域</td><td>显示 AI 分析结果：商品项 + 税费 + 小计 + Tip + 总计</td></tr>
+        <tr><td>英文翻译</td><td>明细中可点击"英文翻译"查看原文</td></tr>
+        <tr><td>标签标注</td><td><span style="background:#FFF3E0;font-size:10px;padding:1px 4px;border-radius:3px;">原始</span> 表示 AI 提取的原始分类</td></tr>
+        <tr><td>Tip 高亮</td><td>小费行用 <span class="color-dot" style="background:#FFF8E1;"></span>黄色底色标注</td></tr>
+        <tr><td>总计</td><td><span class="color-dot" style="background:#FFF3E0;"></span>橙色底色，加粗金额</td></tr>
+        <tr><td>描述</td><td>AI 生成摘要（"在安大略省...餐厅用餐"），可展开查看全文</td></tr>
+        <tr><td>票据照片</td><td>已有照片缩略图（可 ✕ 删除）+ 新增按钮</td></tr>
+        <tr><td>底部按钮</td><td>删除（红字）+ 取消 + 保存（蓝色）</td></tr>
+      </table>
+
+      <div class="note">
+        <strong>首期简化：</strong>明细解析（AI 识别票据行项目）是高级功能，首期编辑弹窗与"记一笔"共用同一组件，
+        仅增加预填数据 + 删除按钮。明细解析待照片功能完善后迭代。
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-expense-edit" placeholder="对「8. 编辑账单」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-expense-edit" onclick="saveFeedback('expense-edit')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 9. 条目操作 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="expense-action">
+  <div class="section-title-bar">
+    <span class="num">9</span>
+    <h2>记账条目操作</h2>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114101_68_2.jpg" alt="Android 条目操作" />
+      <div class="caption">Android 版 · 底部操作 Sheet</div>
+    </div>
+    <div class="design-col">
+      <h3>设计要点</h3>
+      <table class="spec">
+        <tr><td>触发</td><td>点击记账卡片</td></tr>
+        <tr><td>组件</td><td><code>bindSheet</code> 底部弹出，带顶部拖拽手柄</td></tr>
+        <tr><td>标题</td><td>显示条目名称（如 "T&T Supermarket #028"）</td></tr>
+        <tr><td>操作项</td><td>✏️ 编辑 → 打开编辑弹窗<br>🔗 分享 <span class="diff-tag skip">待开发</span><br>🗑 删除（红色）→ 确认后移入回收站</td></tr>
+        <tr><td>手柄</td><td>顶部 32×3vp 灰色圆角条，居中</td></tr>
+      </table>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:300px;position:relative;">
+        <div class="pm-status"><span>11:40</span><span style="font-size:9px;">5G 🔋46</span></div>
+        <div class="pm-body" style="flex:1;background:rgba(0,0,0,0.15);position:relative;">
+          <div class="m-sheet">
+            <div class="handle"></div>
+            <div class="stitle">T&T Supermarket #028</div>
+            <div class="sitem"><span class="si-ico">✏️</span> 编辑</div>
+            <div class="sitem"><span class="si-ico">🔗</span> 分享 <span class="si-bdg">待开发</span></div>
+            <div class="sitem del"><span class="si-ico">🗑</span> 删除</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-expense-action" placeholder="对「9. 条目操作」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-expense-action" onclick="saveFeedback('expense-action')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 10. 回收站 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="expense-bin">
+  <div class="section-title-bar">
+    <span class="num">10</span>
+    <h2>回收站</h2>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114053_64_2.jpg" alt="Android 回收站" />
+      <div class="caption">Android 版 · 回收站弹窗</div>
+    </div>
+    <div class="design-col">
+      <h3>设计要点</h3>
+      <table class="spec">
+        <tr><td>入口</td><td>记账页顶栏或菜单中的回收站入口<span class="diff-tag skip">首期可选</span></td></tr>
+        <tr><td>标题</td><td>"回收站" + 右侧 "清空" 按钮（蓝色）</td></tr>
+        <tr><td>说明</td><td>"最近删除的 N 条记录（最多保留10条）"</td></tr>
+        <tr><td>列表项</td><td>条目名 + 金额（蓝色） + 日期 + "恢复" 按钮</td></tr>
+        <tr><td>底部</td><td>"关闭" 按钮</td></tr>
+        <tr><td>逻辑</td><td>删除时移入回收站；恢复时还原到列表；清空永久删除</td></tr>
+      </table>
+
+      <div class="note">
+        <strong>首期建议：</strong>回收站功能较次要，首期删除可直接生效（二次确认弹窗即可），回收站待后续迭代。
+      </div>
+
+      <h3>鸿蒙版 Mockup（简化版确认弹窗）</h3>
+      <div class="phone-mini" style="height:200px;position:relative;">
+        <div class="pm-body" style="flex:1;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;padding:16px;">
+          <div style="background:var(--card);border-radius:16px;padding:20px;width:100%;text-align:center;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">确认删除？</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:14px;">删除 "T&T Supermarket" $1.78</div>
+            <div style="display:flex;gap:8px;">
+              <button style="flex:1;height:32px;border-radius:16px;border:none;background:var(--bg);font-size:12px;cursor:pointer;">取消</button>
+              <button style="flex:1;height:32px;border-radius:16px;border:none;background:var(--danger);color:#fff;font-size:12px;cursor:pointer;">删除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-expense-bin" placeholder="对「10. 回收站」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-expense-bin" onclick="saveFeedback('expense-bin')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 11. 设置页 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="settings">
+  <div class="section-title-bar">
+    <span class="num">11</span>
+    <h2>设置页</h2>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114159_69_2.jpg" alt="Android 设置" />
+      <div class="caption">Android 版 · 设置页</div>
+    </div>
+    <div class="design-col">
+      <h3>设计要点</h3>
+      <table class="spec">
+        <tr><th>分组</th><th>内容</th></tr>
+        <tr><td>账号</td><td>头像 + 用户名 + Next 账号信息（登录/退出）</td></tr>
+        <tr><td>模型</td><td>⚙ 模型设置 → 当前模型名（如 "Claude · opus4.6"）<span class="diff-tag change">鸿蒙首期固定 DeepSeek</span></td></tr>
+        <tr><td>外观</td><td>⚙ 主题 → 跟随系统/亮色/暗色</td></tr>
+        <tr><td>数据</td><td>ℹ 记忆管理 → "N条记忆，N个人物"<br>❤ 人格状态 → "熟悉 · N次对话"<span class="diff-tag skip">首期不做</span></td></tr>
+        <tr><td>关于</td><td>ℹ 关于二狗 → 版本号</td></tr>
+      </table>
+
+      <h3>首期范围</h3>
+      <div class="note">
+        设置页首期只需：<br>
+        - <strong>账号</strong>：Next 登录/退出<br>
+        - <strong>关于</strong>：版本号<br>
+        API Key 内置，不需要用户配置。记忆管理、人格状态、主题切换待后续。
+      </div>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:400px;">
+        <div class="pm-status"><span>11:41</span><span style="font-size:9px;">5G 🔋45</span></div>
+        <div class="pm-topbar">
+          <span class="act" style="font-size:14px;">←</span>
+          <span class="title">设置</span>
+        </div>
+        <div class="pm-body" style="flex:1;overflow-y:auto;background:#FAFBFC;">
+          <div class="m-set-group">
+            <div class="sg-title">账号</div>
+            <div class="m-set-item">
+              <div class="si-ico">👤</div>
+              <div class="si-info"><div class="si-name">Boris</div><div class="si-desc">Next: boris</div></div>
+            </div>
+          </div>
+          <div class="m-set-group">
+            <div class="sg-title" style="opacity:0.4;">模型（待开发）</div>
+            <div class="m-set-item" style="opacity:0.4;">
+              <div class="si-ico">⚙</div>
+              <div class="si-info"><div class="si-name">模型设置</div><div class="si-desc">当前: DeepSeek（内置）</div></div>
+            </div>
+          </div>
+          <div class="m-set-group">
+            <div class="sg-title" style="opacity:0.4;">数据（待开发）</div>
+            <div class="m-set-item" style="opacity:0.4;">
+              <div class="si-ico">ℹ</div>
+              <div class="si-info"><div class="si-name">记忆管理</div><div class="si-desc">--</div></div>
+            </div>
+            <div class="m-set-item" style="opacity:0.4;">
+              <div class="si-ico">❤</div>
+              <div class="si-info"><div class="si-name">人格状态</div><div class="si-desc">--</div></div>
+            </div>
+          </div>
+          <div class="m-set-group">
+            <div class="sg-title">关于</div>
+            <div class="m-set-item">
+              <div class="si-ico">ℹ</div>
+              <div class="si-info"><div class="si-name">关于二狗</div><div class="si-desc">v1.0.0</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-settings" placeholder="对「11. 设置页」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-settings" onclick="saveFeedback('settings')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 12. 功能广场 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="hub">
+  <div class="section-title-bar">
+    <span class="num">12</span>
+    <h2>功能广场</h2>
+    <span class="diff-tag change">鸿蒙版改为抽屉菜单</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col">
+      <img src="../pic/Weixin Image_20260311114201_70_2.jpg" alt="Android 功能广场" />
+      <div class="caption">Android 版 · 功能广场（2×3 宫格）</div>
+    </div>
+    <div class="design-col">
+      <h3>Android → 鸿蒙 变更说明</h3>
+      <div class="note">
+        Android 版的"功能广场"是独立页面，2×3 宫格展示 6 个功能模块。<br><br>
+        <strong>鸿蒙版不做独立功能广场页面</strong>，改为 ≡ 侧边抽屉菜单（见 <a href="#drawer">#2</a>）。<br>
+        理由：首期只有对话+记账，宫格太空旷；抽屉更适合逐步扩展。
+      </div>
+
+      <h3>功能清单与状态</h3>
+      <table class="spec">
+        <tr><th>功能</th><th>首期状态</th></tr>
+        <tr><td>📝 任务</td><td>待开发（灰色，抽屉中显示）</td></tr>
+        <tr><td>🔄 例行</td><td>待开发</td></tr>
+        <tr><td>💰 记账</td><td><strong>可用</strong>（抽屉 + 快捷栏）</td></tr>
+        <tr><td>✈️ 差旅</td><td>待开发</td></tr>
+        <tr><td>📖 学习</td><td>待开发</td></tr>
+        <tr><td>🧘 养生</td><td>待开发</td></tr>
+      </table>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-hub" placeholder="对「12. 功能广场」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-hub" onclick="saveFeedback('hub')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 13. 首次启动 -->
+<!-- ============================================================ -->
+<div class="screen-section" id="setup">
+  <div class="section-title-bar">
+    <span class="num">13</span>
+    <h2>首次启动配置</h2>
+    <span class="diff-tag new">鸿蒙新增</span>
+  </div>
+  <div class="section-body">
+    <div class="screenshot-col" style="justify-content:center;">
+      <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px;">
+        鸿蒙版首次启动时<br>显示登录页面
+      </div>
+    </div>
+    <div class="design-col">
+      <h3>设计要点</h3>
+      <table class="spec">
+        <tr><td>触发</td><td>Preferences 中无登录态时自动显示</td></tr>
+        <tr><td>页面类型</td><td>全屏覆盖页（非弹窗），挡住主界面</td></tr>
+        <tr><td>Logo</td><td>🐕 80×80vp 蓝色圆角方块</td></tr>
+        <tr><td>标题</td><td>"欢迎使用二狗"（24fp 加粗）</td></tr>
+        <tr><td>账号</td><td>用户名输入框，必填</td></tr>
+        <tr><td>密码</td><td>密码输入框，必填，密码模式</td></tr>
+        <tr><td>登录按钮</td><td>全宽圆角按钮，账号密码为空时 disabled</td></tr>
+      </table>
+
+      <div class="note">
+        <strong>说明：</strong>API Key 内置在应用中，不需要用户配置。首次启动只需登录 Next 账号即可。
+      </div>
+
+      <h3>鸿蒙版 Mockup</h3>
+      <div class="phone-mini" style="height:400px;">
+        <div class="pm-status"><span>10:00</span><span style="font-size:9px;">5G 🔋70</span></div>
+        <div class="pm-body" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--card);">
+          <div style="width:48px;height:48px;background:var(--primary);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;margin-bottom:12px;">🐕</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:16px;">欢迎使用二狗</div>
+          <div style="width:100%;text-align:left;">
+            <div style="font-size:9px;color:var(--text2);margin-bottom:3px;">账号</div>
+            <input style="width:100%;height:28px;background:var(--bg);border:1.5px solid var(--divider);border-radius:6px;padding:0 8px;font-size:10px;outline:none;margin-bottom:8px;" placeholder="请输入用户名" readonly />
+            <div style="font-size:9px;color:var(--text2);margin-bottom:3px;">密码</div>
+            <input style="width:100%;height:28px;background:var(--bg);border:1.5px solid var(--divider);border-radius:6px;padding:0 8px;font-size:10px;outline:none;margin-bottom:16px;" placeholder="请输入密码" type="password" readonly />
+          </div>
+          <button style="width:100%;height:32px;background:var(--primary);color:#fff;border:none;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;">登录</button>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-col">
+      <div class="fb-title">📝 我的意见</div>
+      <textarea class="fb-area" id="fb-setup" placeholder="对「13. 首次启动」的修改意见..."></textarea>
+      <button class="fb-save" id="btn-setup" onclick="saveFeedback('setup')">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center;color:var(--text3);font-size:12px;padding:24px 0 40px;">
+  二狗鸿蒙版 UI 草稿 v3.0 · 2026-03-11 · 参照 Android 版截图设计
+</div>
+
+</div><!-- /main -->
+</body>
+</html>
