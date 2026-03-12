@@ -25,7 +25,7 @@ export class SessionDao {
       return rowId
     } catch (err) {
       Logger.error(TAG, `会话创建失败 error=${JSON.stringify(err)}`)
-      throw err
+      throw new Error(JSON.stringify(err))
     }
   }
 
@@ -101,12 +101,12 @@ export class SessionDao {
   }
 
   private fromResultSet(resultSet: relationalStore.ResultSet): Session {
-    return {
-      id: resultSet.getLong(resultSet.getColumnIndex('id')),
-      title: resultSet.getString(resultSet.getColumnIndex('title')),
-      createdAt: resultSet.getLong(resultSet.getColumnIndex('created_at')),
-      updatedAt: resultSet.getLong(resultSet.getColumnIndex('updated_at')),
-      messageCount: resultSet.getLong(resultSet.getColumnIndex('message_count'))
-    }
+    return new Session(
+      resultSet.getLong(resultSet.getColumnIndex('id')),
+      resultSet.getString(resultSet.getColumnIndex('title')),
+      resultSet.getLong(resultSet.getColumnIndex('created_at')),
+      resultSet.getLong(resultSet.getColumnIndex('updated_at')),
+      resultSet.getLong(resultSet.getColumnIndex('message_count'))
+    )
   }
 }

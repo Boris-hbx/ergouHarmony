@@ -58,13 +58,13 @@ export class ChatViewModel {
     this.streamingContent = ''
 
     // 先添加用户消息到列表（乐观更新）
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      sessionId: this.currentSessionId,
-      role: 'user',
-      content: content.trim(),
-      createdAt: Date.now()
-    }
+    const userMessage = new ChatMessage(
+      Date.now(),
+      this.currentSessionId,
+      'user',
+      content.trim(),
+      Date.now()
+    )
     this.messages = [...this.messages, userMessage]
 
     // 第一条消息时更新会话标题
@@ -74,11 +74,11 @@ export class ChatViewModel {
       await this.loadSessions()
     }
 
-    const callback: ChatCallback = {
-      onStreamContent: (streamContent: string) => {
+    const callback = new ChatCallback(
+      (streamContent: string) => {
         this.streamingContent = streamContent
       },
-      onStreamDone: async (fullContent: string) => {
+      async (fullContent: string) => {
         this.streamingContent = ''
         this.isStreaming = false
         this.isLoading = false
@@ -86,10 +86,10 @@ export class ChatViewModel {
         // 重新加载消息以获得正确的 ID
         await this.loadMessages()
       },
-      onToolExecuting: (toolName: string) => {
+      (toolName: string) => {
         this.executingTool = toolName
       },
-      onError: (error: string) => {
+      (error: string) => {
         this.errorMessage = error
         this.isStreaming = false
         this.isLoading = false
@@ -97,7 +97,7 @@ export class ChatViewModel {
         this.executingTool = ''
         Logger.error(TAG, `对话错误 error=${error}`)
       }
-    }
+    )
 
     try {
       await this.chatService.sendMessage(this.currentSessionId, content.trim(), callback)

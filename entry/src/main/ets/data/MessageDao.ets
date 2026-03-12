@@ -2,7 +2,7 @@ import { relationalStore } from '@kit.ArkData'
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
 import { DatabaseHelper } from './DatabaseHelper'
-import { ChatMessage } from '../model/ChatModels'
+import { ChatMessage, CreateMessageParams } from '../model/ChatModels'
 import { ToolCall } from '../model/LLMModels'
 
 const TAG = Constants.TAG_DB
@@ -12,7 +12,7 @@ export class MessageDao {
     return DatabaseHelper.getStore()
   }
 
-  async create(message: Omit<ChatMessage, 'id'>): Promise<number> {
+  async create(message: CreateMessageParams): Promise<number> {
     const bucket: relationalStore.ValuesBucket = {
       session_id: message.sessionId,
       role: message.role,
@@ -26,7 +26,7 @@ export class MessageDao {
       return rowId
     } catch (err) {
       Logger.error(TAG, `消息创建失败 error=${JSON.stringify(err)}`)
-      throw err
+      throw new Error(JSON.stringify(err))
     }
   }
 
@@ -93,14 +93,14 @@ export class MessageDao {
 
     const toolCallId = resultSet.getString(resultSet.getColumnIndex('tool_call_id'))
 
-    return {
-      id: resultSet.getLong(resultSet.getColumnIndex('id')),
-      sessionId: resultSet.getLong(resultSet.getColumnIndex('session_id')),
-      role: resultSet.getString(resultSet.getColumnIndex('role')) as ChatMessage['role'],
-      content: resultSet.getString(resultSet.getColumnIndex('content')),
-      createdAt: resultSet.getLong(resultSet.getColumnIndex('created_at')),
-      toolCalls: toolCalls,
-      toolCallId: toolCallId || undefined
-    }
+    return new ChatMessage(
+      resultSet.getLong(resultSet.getColumnIndex('id')),
+      resultSet.getLong(resultSet.getColumnIndex('session_id')),
+      resultSet.getString(resultSet.getColumnIndex('role')) as 'system' | 'user' | 'assistant' | 'tool',
+      resultSet.getString(resultSet.getColumnIndex('content')),
+      resultSet.getLong(resultSet.getColumnIndex('created_at')),
+      toolCalls,
+      toolCallId || undefined
+    )
   }
 }

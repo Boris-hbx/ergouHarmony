@@ -2,7 +2,7 @@ import { relationalStore } from '@kit.ArkData'
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
 import { DatabaseHelper } from './DatabaseHelper'
-import { Memory } from '../model/ChatModels'
+import { Memory, CreateMemoryParams } from '../model/ChatModels'
 
 const TAG = Constants.TAG_DB
 
@@ -11,7 +11,7 @@ export class MemoryDao {
     return DatabaseHelper.getStore()
   }
 
-  async create(memory: Omit<Memory, 'id'>): Promise<number> {
+  async create(memory: CreateMemoryParams): Promise<number> {
     const bucket: relationalStore.ValuesBucket = {
       category: memory.category,
       content: memory.content,
@@ -29,7 +29,7 @@ export class MemoryDao {
       return rowId
     } catch (err) {
       Logger.error(TAG, `记忆创建失败 error=${JSON.stringify(err)}`)
-      throw err
+      throw new Error(JSON.stringify(err))
     }
   }
 
@@ -128,17 +128,17 @@ export class MemoryDao {
   }
 
   private fromResultSet(resultSet: relationalStore.ResultSet): Memory {
-    return {
-      id: resultSet.getLong(resultSet.getColumnIndex('id')),
-      category: resultSet.getString(resultSet.getColumnIndex('category')) as Memory['category'],
-      content: resultSet.getString(resultSet.getColumnIndex('content')),
-      importance: resultSet.getLong(resultSet.getColumnIndex('importance')),
-      repeatCount: resultSet.getLong(resultSet.getColumnIndex('repeat_count')),
-      emotionWeight: resultSet.getDouble(resultSet.getColumnIndex('emotion_weight')),
-      sourceSessionId: resultSet.getLong(resultSet.getColumnIndex('source_session_id')),
-      accessCount: resultSet.getLong(resultSet.getColumnIndex('access_count')),
-      createdAt: resultSet.getLong(resultSet.getColumnIndex('created_at')),
-      updatedAt: resultSet.getLong(resultSet.getColumnIndex('updated_at'))
-    }
+    return new Memory(
+      resultSet.getLong(resultSet.getColumnIndex('id')),
+      resultSet.getString(resultSet.getColumnIndex('category')),
+      resultSet.getString(resultSet.getColumnIndex('content')),
+      resultSet.getLong(resultSet.getColumnIndex('importance')),
+      resultSet.getLong(resultSet.getColumnIndex('repeat_count')),
+      resultSet.getDouble(resultSet.getColumnIndex('emotion_weight')),
+      resultSet.getLong(resultSet.getColumnIndex('source_session_id')),
+      resultSet.getLong(resultSet.getColumnIndex('access_count')),
+      resultSet.getLong(resultSet.getColumnIndex('created_at')),
+      resultSet.getLong(resultSet.getColumnIndex('updated_at'))
+    )
   }
 }

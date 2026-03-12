@@ -1,4 +1,5 @@
 import { http } from '@kit.NetworkKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
 import { ChatRequest } from '../model/LLMModels'
@@ -6,18 +7,36 @@ import { ChatRequest } from '../model/LLMModels'
 const TAG = Constants.TAG_LLM
 
 // 工具调用信息
-export interface ToolCallInfo {
+export class ToolCallInfo {
   id: string
   name: string
   inputJson: string
+
+  constructor(id: string, name: string, inputJson: string) {
+    this.id = id
+    this.name = name
+    this.inputJson = inputJson
+  }
 }
 
 // 流式回调
-export interface StreamCallback {
-  onContent(content: string): void
-  onToolUse(toolCalls: ToolCallInfo[]): void
-  onDone(stopReason: string): void
-  onError(error: string): void
+export class StreamCallback {
+  onContent: (content: string) => void
+  onToolUse: (toolCalls: ToolCallInfo[]) => void
+  onDone: (stopReason: string) => void
+  onError: (error: string) => void
+
+  constructor(
+    onContent: (content: string) => void,
+    onToolUse: (toolCalls: ToolCallInfo[]) => void,
+    onDone: (stopReason: string) => void,
+    onError: (error: string) => void
+  ) {
+    this.onContent = onContent
+    this.onToolUse = onToolUse
+    this.onDone = onDone
+    this.onError = onError
+  }
 }
 
 export class LLMClient {
@@ -77,11 +96,7 @@ export class LLMClient {
             } else if (eventType === 'content_block_stop') {
               // 如果是工具块结束，收集
               if (currentToolId.length > 0) {
-                pendingToolCalls.push({
-                  id: currentToolId,
-                  name: currentToolName,
-                  inputJson: currentToolInput || '{}'
-                })
+                pendingToolCalls.push(new ToolCallInfo(currentToolId, currentToolName, currentToolInput || '{}'))
                 currentToolId = ''
                 currentToolName = ''
                 currentToolInput = ''
@@ -111,7 +126,7 @@ export class LLMClient {
     })
 
     try {
-      const response = await this.httpRequest.requestInStream(Constants.CLAUDE_API_URL, {
+      const responseCode: number = await this.httpRequest.requestInStream(Constants.CLAUDE_API_URL, {
         method: http.RequestMethod.POST,
         header: {
           'Content-Type': 'application/json',
@@ -122,13 +137,14 @@ export class LLMClient {
         expectDataType: http.HttpDataType.STRING
       })
 
-      if (response.responseCode !== 200) {
-        callback.onError(`HTTP ${response.responseCode}`)
+      if (responseCode !== 200) {
+        callback.onError(`HTTP ${responseCode}`)
         this.cleanup()
       }
     } catch (err) {
-      Logger.error(TAG, `请求失败 error=${JSON.stringify(err)}`)
-      callback.onError((err as Error).message || '网络请求失败')
+      const errObj = err as BusinessError
+      Logger.error(TAG, `请求失败 error=${errObj.message}`)
+      callback.onError(errObj.message || '网络请求失败')
       this.cleanup()
     }
   }

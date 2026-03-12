@@ -4,7 +4,7 @@ import { ChatInputBar } from '../components/ChatInputBar'
 
 @Component
 export struct ChatPage {
-  @ObjectLink vm: ChatViewModel
+  @Param vm: ChatViewModel = new ChatViewModel()
   private listScroller: ListScroller = new ListScroller()
 
   build() {

@@ -1,5 +1,5 @@
 import { Tool, ToolResult } from '../model/ToolModels'
-import { ToolDefinition } from '../model/LLMModels'
+import { ClaudeToolDefinition } from '../model/LLMModels'
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
 
@@ -17,10 +17,11 @@ export class ToolRegistry {
     return this.tools.get(name)
   }
 
-  getAllDefinitions(): ToolDefinition[] {
-    const definitions: ToolDefinition[] = []
+  getAllDefinitions(): ClaudeToolDefinition[] {
+    const definitions: ClaudeToolDefinition[] = []
     this.tools.forEach((tool) => {
-      definitions.push(tool.toDefinition())
+      const schema = JSON.parse(tool.parametersSchema) as Record<string, Object>
+      definitions.push(new ClaudeToolDefinition(tool.name, tool.description, schema))
     })
     return definitions
   }
@@ -29,32 +30,17 @@ export class ToolRegistry {
     const tool = this.tools.get(name)
     if (!tool) {
       Logger.warn(TAG, `未知工具 name=${name}`)
-      return {
-        toolCallId: toolCallId,
-        name: name,
-        content: `未知工具: ${name}`,
-        success: false
-      }
+      return new ToolResult(toolCallId, name, `未知工具: ${name}`, false)
     }
 
     try {
       const args: Record<string, Object> = JSON.parse(argsJson) as Record<string, Object>
       Logger.info(TAG, `执行工具 name=${name}`)
-      const result = await tool.execute(args)
-      return {
-        toolCallId: toolCallId,
-        name: name,
-        content: result,
-        success: true
-      }
+      const content = await tool.execute(args)
+      return new ToolResult(toolCallId, name, content, true)
     } catch (err) {
       Logger.error(TAG, `工具执行失败 name=${name} error=${JSON.stringify(err)}`)
-      return {
-        toolCallId: toolCallId,
-        name: name,
-        content: `工具执行失败: ${(err as Error).message || String(err)}`,
-        success: false
-      }
+      return new ToolResult(toolCallId, name, `工具执行失败: ${(err as Error).message || String(err)}`, false)
     }
   }
 }
