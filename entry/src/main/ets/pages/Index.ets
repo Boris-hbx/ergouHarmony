@@ -5,7 +5,7 @@ import { Session } from '../model/ChatModels'
 @Entry
 @Component
 struct Index {
-  @Local vm: ChatViewModel = new ChatViewModel()
+  @State vm: ChatViewModel = new ChatViewModel()
   @State showDrawer: boolean = false
 
   aboutToAppear(): void {
