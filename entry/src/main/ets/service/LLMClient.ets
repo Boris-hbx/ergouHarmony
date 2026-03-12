@@ -3,6 +3,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
 import { ChatRequest } from '../model/LLMModels'
+import { Secrets } from '../common/Secrets'
 
 const TAG = Constants.TAG_LLM
 
@@ -130,7 +131,7 @@ export class LLMClient {
         method: http.RequestMethod.POST,
         header: {
           'Content-Type': 'application/json',
-          'x-api-key': Constants.CLAUDE_API_KEY,
+          'x-api-key': Secrets.CLAUDE_API_KEY,
           'anthropic-version': Constants.CLAUDE_API_VERSION
         },
         extraData: JSON.stringify(request),
