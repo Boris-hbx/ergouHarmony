@@ -7,16 +7,16 @@ import { Constants } from '../common/Constants'
 
 const TAG = Constants.TAG_CHAT
 
-@ObservedV2
+@Observed
 export class ChatViewModel {
-  @Trace messages: ChatMessage[] = []
-  @Trace streamingContent: string = ''
-  @Trace isLoading: boolean = false
-  @Trace isStreaming: boolean = false
-  @Trace currentSessionId: number = -1
-  @Trace errorMessage: string = ''
-  @Trace executingTool: string = ''
-  @Trace sessions: Session[] = []
+  messages: ChatMessage[] = []
+  streamingContent: string = ''
+  isLoading: boolean = false
+  isStreaming: boolean = false
+  currentSessionId: number = -1
+  errorMessage: string = ''
+  executingTool: string = ''
+  sessions: Session[] = []
 
   private chatService: ChatService = new ChatService()
   private sessionDao: SessionDao = new SessionDao()
