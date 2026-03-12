@@ -22,7 +22,7 @@ export struct MessageBubble {
         .fontSize(15)
         .fontColor('#FFFFFF')
         .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-        .backgroundColor('#007AFF')
+        .backgroundColor('#7C4DFF')
         .borderRadius({
           topLeft: 16,
           topRight: 4,
@@ -40,12 +40,9 @@ export struct MessageBubble {
   AssistantBubble() {
     Row() {
       // 二狗头像
-      Text('🐕')
-        .fontSize(20)
+      Image($r('app.media.avatar_ergou'))
         .width(32)
         .height(32)
-        .textAlign(TextAlign.Center)
-        .backgroundColor('#F0F0F0')
         .borderRadius(16)
         .margin({ right: 8 })
 

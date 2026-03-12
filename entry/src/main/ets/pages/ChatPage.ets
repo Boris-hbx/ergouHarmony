@@ -66,8 +66,10 @@ export struct ChatPage {
   @Builder
   EmptyState() {
     Column() {
-      Text('🐕')
-        .fontSize(60)
+      Image($r('app.media.avatar_ergou'))
+        .width(80)
+        .height(80)
+        .borderRadius(40)
         .margin({ bottom: 16 })
       Text('二狗')
         .fontSize(22)
@@ -86,9 +88,9 @@ export struct ChatPage {
           (topic: string) => {
             Text(topic)
               .fontSize(14)
-              .fontColor('#007AFF')
+              .fontColor('#7C4DFF')
               .padding({ left: 16, right: 16, top: 10, bottom: 10 })
-              .backgroundColor('#F0F7FF')
+              .backgroundColor('#F3EEFF')
               .borderRadius(20)
               .onClick(() => {
                 this.vm.sendMessage(topic)
@@ -116,12 +118,9 @@ export struct ChatPage {
       if (this.vm.streamingContent.length > 0) {
         ListItem() {
           Row() {
-            Text('🐕')
-              .fontSize(20)
+            Image($r('app.media.avatar_ergou'))
               .width(32)
               .height(32)
-              .textAlign(TextAlign.Center)
-              .backgroundColor('#F0F0F0')
               .borderRadius(16)
               .margin({ right: 8 })
 

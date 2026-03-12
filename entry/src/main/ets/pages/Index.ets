@@ -69,7 +69,7 @@ struct Index {
       // 新对话
       Text('+')
         .fontSize(24)
-        .fontColor('#007AFF')
+        .fontColor('#7C4DFF')
         .width(44)
         .height(44)
         .textAlign(TextAlign.Center)
@@ -89,8 +89,10 @@ struct Index {
     Column() {
       // 头部
       Column() {
-        Text('🐕')
-          .fontSize(36)
+        Image($r('app.media.avatar_ergou'))
+          .width(56)
+          .height(56)
+          .borderRadius(28)
           .margin({ bottom: 8 })
         Text('二狗')
           .fontSize(18)
@@ -134,7 +136,7 @@ struct Index {
             Row() {
               Text(session.title)
                 .fontSize(14)
-                .fontColor(session.id === this.vm.currentSessionId ? '#007AFF' : '#333333')
+                .fontColor(session.id === this.vm.currentSessionId ? '#7C4DFF' : '#333333')
                 .layoutWeight(1)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -169,12 +171,12 @@ struct Index {
         .margin({ right: 12 })
       Text(label)
         .fontSize(15)
-        .fontColor(disabled ? '#CCCCCC' : (active ? '#007AFF' : '#333333'))
+        .fontColor(disabled ? '#CCCCCC' : (active ? '#7C4DFF' : '#333333'))
         .layoutWeight(1)
       if (active) {
         Text('◄')
           .fontSize(10)
-          .fontColor('#007AFF')
+          .fontColor('#7C4DFF')
       }
       if (disabled) {
         Text('待开发')

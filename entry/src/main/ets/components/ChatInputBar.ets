@@ -48,7 +48,7 @@ export struct ChatInputBar {
         .width(40)
         .height(40)
         .borderRadius(20)
-        .backgroundColor(this.inputText.trim().length > 0 ? '#007AFF' : '#E5E5E5')
+        .backgroundColor(this.inputText.trim().length > 0 ? '#7C4DFF' : '#E5E5E5')
         .margin({ left: 8 })
         .enabled(this.inputText.trim().length > 0)
         .onClick(() => {
