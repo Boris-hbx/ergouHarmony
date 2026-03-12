@@ -92,6 +92,41 @@ class NextApiClientClass {
     await this.request(http.RequestMethod.DELETE, `/expenses/${id}`)
   }
 
+  // ===== 记忆 API =====
+
+  async saveMemory(category: string, content: string, importance: number = 3): Promise<Record<string, Object>> {
+    const body = JSON.stringify({ category, content, importance })
+    const result = await this.request(http.RequestMethod.POST, '/memories/', body)
+    const json = JSON.parse(result) as Record<string, Object>
+    return json['memory'] as Record<string, Object> || json
+  }
+
+  async searchMemory(query: string, limit: number = 10): Promise<Object[]> {
+    const result = await this.request(http.RequestMethod.GET, `/memories/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+    const json = JSON.parse(result) as Record<string, Object>
+    return json['memories'] as Object[] || []
+  }
+
+  async getMemories(limit: number = 20, sort: string = 'recent', category?: string): Promise<Object[]> {
+    let path = `/memories/?limit=${limit}&sort=${sort}`
+    if (category && category.length > 0) {
+      path += `&category=${encodeURIComponent(category)}`
+    }
+    const result = await this.request(http.RequestMethod.GET, path)
+    const json = JSON.parse(result) as Record<string, Object>
+    return json['memories'] as Object[] || []
+  }
+
+  async batchUploadMemories(memories: Object[]): Promise<Record<string, Object>> {
+    const body = JSON.stringify({ memories })
+    const result = await this.request(http.RequestMethod.POST, '/memories/batch', body)
+    return JSON.parse(result) as Record<string, Object>
+  }
+
+  async deleteMemory(id: string): Promise<void> {
+    await this.request(http.RequestMethod.DELETE, `/memories/${id}`)
+  }
+
   private parseEntry(json: Record<string, Object>): ExpenseEntry {
     const tagsRaw = json['tags'] as string || ''
     const tags = tagsRaw.length > 0 ? tagsRaw.split(',') : []

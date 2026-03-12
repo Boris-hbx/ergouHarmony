@@ -1,6 +1,8 @@
 import { Logger } from '../common/Logger'
 import { Constants } from '../common/Constants'
+import { PreferencesUtil } from '../common/PreferencesUtil'
 import { LLMClient, StreamCallback, ToolCallInfo } from './LLMClient'
+import { NextApiClient } from './NextApiClient'
 import { ErgouPrompt } from './ErgouPrompt'
 import { ToolRegistry } from '../tool/ToolRegistry'
 import { GetDateTimeTool } from '../tool/GetDateTimeTool'
@@ -53,20 +55,19 @@ export class ChatService {
   private sessionDao: SessionDao = new SessionDao()
   private messageDao: MessageDao = new MessageDao()
   private memoryDao: MemoryDao = new MemoryDao()
-  private saveMemoryTool: SaveMemoryTool = new SaveMemoryTool()
-
   constructor() {
     this.toolRegistry.register(new GetDateTimeTool())
     this.toolRegistry.register(new SimpleCalculateTool())
-    this.toolRegistry.register(this.saveMemoryTool)
+    this.toolRegistry.register(new SaveMemoryTool())
     this.toolRegistry.register(new SearchMemoryTool())
     this.toolRegistry.register(new AddExpenseTool())
     this.toolRegistry.register(new ExpenseSummaryTool())
+
+    // 异步执行记忆迁移（不阻塞构造）
+    this.migrateMemoriesIfNeeded()
   }
 
   async sendMessage(sessionId: number, userContent: string, callback: ChatCallback): Promise<void> {
-    this.saveMemoryTool.setSessionId(sessionId)
-
     // 1. 净化用户输入
     const sanitized = PromptSanitizer.sanitize(userContent)
 
@@ -77,9 +78,8 @@ export class ChatService {
     // 3. 加载历史消息
     const historyMessages = await this.messageDao.getBySessionId(sessionId, Constants.LLM_CONTEXT_MESSAGES)
 
-    // 4. 检索相关记忆
-    const memories = await this.memoryDao.getRecent(5)
-    const memoryTexts = memories.map(m => m.content)
+    // 4. 从后端获取记忆上下文（fallback 本地）
+    const memoryTexts = await this.fetchMemoryContext()
 
     // 5. 组装系统 prompt
     const systemPrompt = ErgouPrompt.buildSystemPrompt() + ErgouPrompt.buildMemoryContext(memoryTexts)
@@ -89,6 +89,55 @@ export class ChatService {
 
     // 7. 开始对话循环
     await this.chatLoop(sessionId, systemPrompt, claudeMessages, callback, 0)
+  }
+
+  private async fetchMemoryContext(): Promise<string[]> {
+    try {
+      const memories = await NextApiClient.getMemories(20, 'recent')
+      const texts: string[] = []
+      for (const m of memories) {
+        const mem = m as Record<string, Object>
+        texts.push(String(mem['content'] || ''))
+      }
+      return texts
+    } catch (err) {
+      Logger.warn(TAG, `后端记忆获取失败，降级本地 error=${(err as Error).message}`)
+      const localMemories = await this.memoryDao.getRecent(20)
+      return localMemories.map(m => m.content)
+    }
+  }
+
+  private async migrateMemoriesIfNeeded(): Promise<void> {
+    try {
+      const migrated = await PreferencesUtil.getString(Constants.KEY_MEMORY_MIGRATED, '')
+      if (migrated === 'done') {
+        return
+      }
+
+      const localMemories = await this.memoryDao.getRecent(200)
+      if (localMemories.length === 0) {
+        await PreferencesUtil.putString(Constants.KEY_MEMORY_MIGRATED, 'done')
+        return
+      }
+
+      Logger.info(TAG, `开始迁移本地记忆到后端 count=${localMemories.length}`)
+      const batch: Object[] = []
+      for (const m of localMemories) {
+        batch.push({
+          category: m.category,
+          content: m.content,
+          importance: m.importance
+        })
+      }
+
+      const result = await NextApiClient.batchUploadMemories(batch)
+      const imported = Number(result['imported'] || 0)
+      Logger.info(TAG, `记忆迁移完成 imported=${imported}`)
+
+      await PreferencesUtil.putString(Constants.KEY_MEMORY_MIGRATED, 'done')
+    } catch (err) {
+      Logger.warn(TAG, `记忆迁移失败（下次重试） error=${(err as Error).message}`)
+    }
   }
 
   async createSession(title?: string): Promise<number> {
@@ -258,28 +307,23 @@ export class ChatService {
     return messages
   }
 
-  private async extractMemoryMarks(content: string, sessionId: number): Promise<void> {
+  private async extractMemoryMarks(content: string, _sessionId: number): Promise<void> {
     const memoryRegex = /\[SAVE_MEMORY:(\w+):([^\]]+)\]/g
     let match = memoryRegex.exec(content)
     while (match !== null) {
       const category = match[1]
       const memoryContent = match[2]
-      const now = Date.now()
       try {
-        await this.memoryDao.create(new CreateMemoryParams(
-          category,
-          memoryContent,
-          3,
-          0,
-          1.0,
-          sessionId,
-          0,
-          now,
-          now
-        ))
-        Logger.info(TAG, `提取记忆 category=${category}`)
+        await NextApiClient.saveMemory(category, memoryContent, 3)
+        Logger.info(TAG, `提取记忆(后端) category=${category}`)
       } catch (err) {
-        Logger.error(TAG, `保存提取记忆失败 error=${JSON.stringify(err)}`)
+        Logger.warn(TAG, `后端保存失败，降级本地 error=${(err as Error).message}`)
+        try {
+          const now = Date.now()
+          await this.memoryDao.create(new CreateMemoryParams(category, memoryContent, 3, 0, 1.0, -1, 0, now, now))
+        } catch {
+          Logger.error(TAG, `本地保存也失败`)
+        }
       }
       match = memoryRegex.exec(content)
     }

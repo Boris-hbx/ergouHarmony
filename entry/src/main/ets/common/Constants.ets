@@ -24,6 +24,7 @@ export class Constants {
   static readonly KEY_SESSION_TOKEN: string = 'next_session_token'
   static readonly KEY_USERNAME: string = 'next_username'
   static readonly KEY_THEME_MODE: string = 'theme_mode'
+  static readonly KEY_MEMORY_MIGRATED: string = 'memory_migrated'
 
   // 网络重试
   static readonly MAX_RETRY_COUNT: number = 3
@@ -37,4 +38,5 @@ export class Constants {
   static readonly TAG_CHAT: string = 'ChatService'
   static readonly TAG_EXPENSE: string = 'ExpenseService'
   static readonly TAG_TOOL: string = 'ToolExecutor'
+  static readonly TAG_MEMORY: string = 'Memory'
 }
