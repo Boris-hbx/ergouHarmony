@@ -7,6 +7,8 @@ import { GetDateTimeTool } from '../tool/GetDateTimeTool'
 import { SimpleCalculateTool } from '../tool/SimpleCalculateTool'
 import { SaveMemoryTool } from '../tool/SaveMemoryTool'
 import { SearchMemoryTool } from '../tool/SearchMemoryTool'
+import { AddExpenseTool } from '../tool/AddExpenseTool'
+import { ExpenseSummaryTool } from '../tool/ExpenseSummaryTool'
 import { SessionDao } from '../data/SessionDao'
 import { MessageDao } from '../data/MessageDao'
 import { MemoryDao } from '../data/MemoryDao'
@@ -58,6 +60,8 @@ export class ChatService {
     this.toolRegistry.register(new SimpleCalculateTool())
     this.toolRegistry.register(this.saveMemoryTool)
     this.toolRegistry.register(new SearchMemoryTool())
+    this.toolRegistry.register(new AddExpenseTool())
+    this.toolRegistry.register(new ExpenseSummaryTool())
   }
 
   async sendMessage(sessionId: number, userContent: string, callback: ChatCallback): Promise<void> {

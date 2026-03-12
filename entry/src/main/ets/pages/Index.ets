@@ -1,6 +1,7 @@
 import { ChatViewModel } from '../viewmodel/ChatViewModel'
 import { ChatPage } from './ChatPage'
 import { Session } from '../model/ChatModels'
+import { router } from '@kit.ArkUI'
 
 @Entry
 @Component
@@ -112,7 +113,21 @@ struct Index {
 
       // 功能菜单
       this.DrawerItem('💬', '对话', true, false)
-      this.DrawerItem('💰', '记账', false, false)
+      Row() {
+        Text('💰')
+          .fontSize(18)
+          .margin({ right: 12 })
+        Text('记账')
+          .fontSize(15)
+          .fontColor('#333333')
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .onClick(() => {
+        this.showDrawer = false
+        router.pushUrl({ url: 'pages/ExpensePage' })
+      })
 
       Divider().color('#E0E0E0').margin({ top: 8, bottom: 8 })
 

@@ -41,14 +41,15 @@ export struct ChatInputBar {
       } else {
         // 发送按钮
         Button() {
-          SymbolGlyph($r('sys.symbol.arrow_up'))
-            .fontSize(18)
-            .fontColor([this.inputText.trim().length > 0 ? '#FFFFFF' : '#CCCCCC'])
+          Text('↑')
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.inputText.trim().length > 0 ? '#FFFFFF' : '#BBBBBB')
         }
-        .width(40)
-        .height(40)
-        .borderRadius(20)
-        .backgroundColor(this.inputText.trim().length > 0 ? '#7C4DFF' : '#E5E5E5')
+        .width(36)
+        .height(36)
+        .borderRadius(18)
+        .backgroundColor(this.inputText.trim().length > 0 ? '#7C4DFF' : '#EEEEEE')
         .margin({ left: 8 })
         .enabled(this.inputText.trim().length > 0)
         .onClick(() => {
@@ -57,9 +58,8 @@ export struct ChatInputBar {
       }
     }
     .width('100%')
-    .padding({ left: 12, right: 12, top: 8, bottom: 24 })
+    .padding({ left: 12, right: 12, top: 8, bottom: 44 })
     .backgroundColor('#FFFFFF')
-    .border({ width: { top: 0.5 }, color: '#E0E0E0' })
   }
 
   private handleSend(): void {

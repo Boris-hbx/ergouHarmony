@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\huai\\.ohos\\config\\default_ergouh_zp-t5AUr8etsCNUiCqGhIKCCjG7Iprh7T48iZ2NwT9U=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B000594A1E560405A7C7C203A4B284C23171042D4203FA9838105385F52A612540AAFC1FFEACC7B",
+          "profile": "C:\\Users\\huai\\.ohos\\config\\default_ergouh_zp-t5AUr8etsCNUiCqGhIKCCjG7Iprh7T48iZ2NwT9U=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\huai\\.ohos\\config\\default_ergouh_zp-t5AUr8etsCNUiCqGhIKCCjG7Iprh7T48iZ2NwT9U=.p12",
+          "storePassword": "0000001BBC77E0A8F2606F92680C85E248956A2F51EF1E42C0908231FF09C813440684641A3AA2DBD01CA4"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

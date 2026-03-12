@@ -1,6 +1,7 @@
 import { ChatViewModel } from '../viewmodel/ChatViewModel'
 import { MessageBubble } from '../components/MessageBubble'
 import { ChatInputBar } from '../components/ChatInputBar'
+import { router } from '@kit.ArkUI'
 
 @Component
 export struct ChatPage {
@@ -43,6 +44,9 @@ export struct ChatPage {
           .backgroundColor('#FFF0F0')
       }
 
+      // 快捷栏
+      this.ShortcutBar()
+
       // 输入栏
       ChatInputBar({
         isStreaming: this.vm.isStreaming,
@@ -61,6 +65,61 @@ export struct ChatPage {
     .width('100%')
     .height('100%')
     .backgroundColor('#FFFFFF')
+  }
+
+  @Builder
+  ShortcutBar() {
+    Scroll() {
+      Row({ space: 8 }) {
+        Text('记账')
+          .fontSize(13)
+          .fontColor('#7C4DFF')
+          .backgroundColor('#F3EEFF')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .borderRadius(18)
+          .border({ width: 1, color: '#7C4DFF' })
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/ExpensePage' })
+          })
+        Text('任务')
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .borderRadius(18)
+          .border({ width: 1, color: '#EEEEEE' })
+        Text('例行')
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .borderRadius(18)
+          .border({ width: 1, color: '#EEEEEE' })
+        Text('出差')
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .borderRadius(18)
+          .border({ width: 1, color: '#EEEEEE' })
+        Text('英语')
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .borderRadius(18)
+          .border({ width: 1, color: '#EEEEEE' })
+        Text('养生')
+          .fontSize(13)
+          .fontColor('#CCCCCC')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .borderRadius(18)
+          .border({ width: 1, color: '#EEEEEE' })
+      }
+      .padding({ left: 12, right: 12 })
+    }
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .width('100%')
+    .padding({ top: 6, bottom: 6 })
+    .backgroundColor('#FFFFFF')
+    .border({ width: { top: 0.5 }, color: '#E0E0E0' })
   }
 
   @Builder
