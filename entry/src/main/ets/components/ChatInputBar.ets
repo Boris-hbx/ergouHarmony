@@ -57,8 +57,9 @@ export struct ChatInputBar {
       }
     }
     .width('100%')
-    .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+    .padding({ left: 12, right: 12, top: 8, bottom: 24 })
     .backgroundColor('#FFFFFF')
+    .border({ width: { top: 0.5 }, color: '#E0E0E0' })
   }
 
   private handleSend(): void {
