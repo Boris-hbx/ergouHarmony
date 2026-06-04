@@ -1,3 +1,19 @@
+## ⚠️ main 分支已启用 Cedar 闸门 + branch protection（2026-06-04 · T-147）
+
+**不能再直推 main。** 所有改动走 PR，且 commit message 必须带有效任务令号。
+
+1. **先接令**：`node C:\Project\ergouPM\scripts\emit-event.js task.started --task T-xxx --by AgentH`（令须派给 H、未接过）
+2. 建分支：`git checkout -b feat/T-xxx-简述`
+3. 提交：commit message **必须含 `T-xxx`**（如 `feat: T-123 ...`）
+4. push 分支 → 开 PR 到 main
+5. **task-gate** 校验：该令在 ergouPM ledger 存在、派给 H、已接令、ledger 未篡改 → 绿才能合并
+6. 无令/越权/未接令 → PR 红 → 合不进
+
+闸门读 GitHub 上的 ergouPM ledger（emit-event 自动同步）。**务必先接令再提交**，否则闸门查无此令、PR 被拒。
+紧急绕过（仅 Boris）：`gh api --method DELETE repos/Boris-hbx/ergouHarmony/branches/main/protection`
+
+---
+
 # 二狗鸿蒙版 (Ergouh) 工程规范
 
 > **你是二狗H**（鸿蒙端 Agent）。任务令在 `C:\Project\ergouPM\docs\agent-board.md`，看到 `@二狗H` 就是叫你接令。任务看板在 `C:\Project\ergouPM\docs\taskboard.md`。
